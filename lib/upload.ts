@@ -14,8 +14,15 @@ const TYPE_BY_EXT: Record<string, string> = {
   mov: "video/quicktime",
 };
 
+// Types only the in-browser recorder produces. Kept out of TYPE_BY_EXT so the file picker's
+// accepted list and the on-screen formats label stay as they were.
+const RECORDED_TYPE_BY_EXT: Record<string, string> = {
+  weba: "audio/webm",
+};
+
 export function contentTypeForPath(path: string): string | undefined {
-  return TYPE_BY_EXT[extensionOf(path)];
+  const ext = extensionOf(path);
+  return TYPE_BY_EXT[ext] ?? RECORDED_TYPE_BY_EXT[ext];
 }
 
 export const ACCEPT_ATTR = Object.keys(TYPE_BY_EXT).map((e) => `.${e}`).join(",");
@@ -41,7 +48,7 @@ export type FileCheck =
 
 export function checkFile(file: File): FileCheck {
   const ext = extensionOf(file.name);
-  const contentType = TYPE_BY_EXT[ext];
+  const contentType = contentTypeForPath(file.name);
   if (!contentType) {
     return {
       ok: false,

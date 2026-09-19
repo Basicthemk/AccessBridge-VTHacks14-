@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import RecordPanel from "@/components/RecordPanel";
 import {
   ACCEPT_ATTR,
   FORMATS_LABEL,
@@ -17,6 +18,7 @@ import {
 
 type Stage = "choose" | "uploading" | "saving" | "done";
 type Picked = { file: File; contentType: string; ext: string };
+type Mode = "file" | "record";
 
 const primaryBtn = "btn btn-primary";
 const outlineBtn = "btn btn-outline";
@@ -32,17 +34,20 @@ export default function UploadForm() {
   const [error, setError] = useState<{ message: string; detail?: string } | null>(null);
   const [loaded, setLoaded] = useState(0);
   const [announce, setAnnounce] = useState("");
+  const [mode, setMode] = useState<Mode>("file");
+  const [recordingActive, setRecordingActive] = useState(false);
+  const tabRefs = useRef<Record<Mode, HTMLButtonElement | null>>({ file: null, record: null });
 
   const busy = stage === "uploading" || stage === "saving";
   const percent = picked ? Math.min(100, Math.round((loaded / picked.file.size) * 100)) : 0;
 
-  // Warn before leaving mid-upload.
+  // Warn before leaving mid-upload or mid-recording.
   useEffect(() => {
-    if (!busy) return;
+    if (!busy && !recordingActive) return;
     const warn = (e: BeforeUnloadEvent) => e.preventDefault();
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [busy]);
+  }, [busy, recordingActive]);
 
   function choose(files: FileList | null) {
     if (busy || !files || files.length === 0) return;
@@ -66,6 +71,32 @@ export default function UploadForm() {
     setPicked(null);
     setError(null);
     if (inputRef.current) inputRef.current.value = "";
+  }
+
+  function switchMode(next: Mode) {
+    if (busy || recordingActive || next === mode) return;
+    clearFile();
+    setMode(next);
+  }
+
+  function onTabKey(e: React.KeyboardEvent) {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight" && e.key !== "Home" && e.key !== "End") return;
+    e.preventDefault();
+    const next: Mode = e.key === "ArrowLeft" || e.key === "Home" ? "file" : "record";
+    switchMode(next);
+    tabRefs.current[next]?.focus();
+  }
+
+  // A recording joins the same state a chosen file does, so the upload below is the same code path.
+  function useRecording(file: File) {
+    const check = checkFile(file);
+    if (!check.ok) {
+      setError({ message: check.message });
+      return;
+    }
+    setError(null);
+    setPicked({ file, contentType: check.contentType, ext: check.ext });
+    setTitle((t) => t.trim() || `Lecture recorded ${new Date().toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}`);
   }
 
   function sendToStorage(url: string, token: string, apikey: string, body: Blob, name: string) {
@@ -202,6 +233,31 @@ export default function UploadForm() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-5" noValidate>
+      <div role="tablist" aria-label="How to add the lecture" className="flex flex-wrap gap-2" onKeyDown={onTabKey}>
+        {(["file", "record"] as Mode[]).map((m) => (
+          <button
+            key={m}
+            ref={(el) => { tabRefs.current[m] = el; }}
+            type="button"
+            role="tab"
+            id={`tab-${m}`}
+            aria-selected={mode === m}
+            aria-controls={`panel-${m}`}
+            aria-disabled={busy || recordingActive}
+            tabIndex={mode === m ? 0 : -1}
+            onClick={() => switchMode(m)}
+            className={`btn ${mode === m ? "btn-primary" : "btn-outline"}`}
+          >
+            {m === "file" ? "Upload a file" : "Record now"}
+          </button>
+        ))}
+      </div>
+      {recordingActive && (
+        <p className="text-sm">Stop the recording to switch back to uploading a file.</p>
+      )}
+
+      {mode === "file" && (
+        <div role="tabpanel" id="panel-file" aria-labelledby="tab-file">
       <div
         onDragEnter={(e) => { e.preventDefault(); if (!busy) setDragging(true); }}
         onDragOver={(e) => { e.preventDefault(); if (!busy) setDragging(true); }}
@@ -258,6 +314,18 @@ export default function UploadForm() {
           </>
         )}
       </div>
+        </div>
+      )}
+      {mode === "record" && (
+        <div role="tabpanel" id="panel-record" aria-labelledby="tab-record" className="rounded-lg border-2 border-accent bg-surface p-5 md:p-6">
+          <RecordPanel
+            locked={busy}
+            onConfirm={useRecording}
+            onDiscard={() => { setPicked(null); setError(null); }}
+            onActiveChange={setRecordingActive}
+          />
+        </div>
+      )}
 
       <div>
         <label htmlFor="title" className="font-bold">Lecture title</label>

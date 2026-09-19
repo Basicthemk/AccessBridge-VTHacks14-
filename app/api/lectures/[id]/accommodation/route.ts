@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { localize, serverT } from "@/lib/server-messages";
+import { localize, requestLocale, serverT } from "@/lib/server-messages";
 import { createClient } from "@/lib/supabase/server";
 import { DraftError, generateAccommodationDraft } from "@/lib/accommodation-draft";
 import type { DisabilityProfile } from "@/lib/profiles";
@@ -52,7 +52,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
     body = await generateAccommodationDraft(profile, {
       title: lecture.title,
       transcript: lecture.transcript_status === "ready" ? lecture.transcript : null,
-    });
+    }, requestLocale());
   } catch (err) {
     const e = err instanceof DraftError ? err : new DraftError("Writing the draft failed unexpectedly. Try again.", String(err));
     console.error("accommodation draft: failed", e.detail ?? e.message);

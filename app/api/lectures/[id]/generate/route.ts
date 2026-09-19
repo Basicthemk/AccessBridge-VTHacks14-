@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { serverT } from "@/lib/server-messages";
+import { requestLocale, serverT } from "@/lib/server-messages";
 import { waitUntil } from "@vercel/functions";
 import { createClient } from "@/lib/supabase/server";
 import { STALE_AFTER_MS, transcriptState } from "@/lib/transcript-status";
@@ -77,10 +77,13 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
     }
   }
 
+  // Read now: the work below carries on after the response, when the request's cookies are gone.
+  const locale = requestLocale();
+
   async function run() {
     const where = { lecture_id: lectureId, profile_type: profile };
     try {
-      const material = await generateStudyMaterial(profile, transcript!);
+      const material = await generateStudyMaterial(profile, transcript!, undefined, locale);
       const { error } = await supabase
         .from("generated_content")
         .update({ content_json: material, status: "ready", error: null, updated_at: new Date().toISOString() })

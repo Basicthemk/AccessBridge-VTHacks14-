@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { BadOutputError, DeadlineError, MODELS_WITHOUT_LITE, generateWithFallback, isDailyQuota } from "./gemini";
 import type { DisabilityProfile } from "./profiles";
+import { DEFAULT_LOCALE, LOCALE_PROMPT_NAMES, type Locale } from "../i18n/config";
 import {
   CONCEPT_MAP_SCHEMA,
   DEAF_HOH_SCHEMA,
@@ -72,6 +73,24 @@ ${SOURCE_RULES}
 Produce concepts: 3 to 25 of the lecture's main ideas, in the order a reader should meet them (foundations first). Give each a theme name; concepts that belong together share the exact same theme wording and sit next to each other. Give each concept a unique slug id, a name, and a one- or two-sentence explanation drawn from the lecture.
 Then list at most 5 relations from each concept to other concepts. A relation is a short active verb phrase plus the id of the target, and must read as a true sentence from the lecture, such as "Photosynthesis" + "produces" + "glucose". Only state relations the transcript states or clearly implies. Do not relate a concept to itself, and do not use a relation twice between the same pair. Every concept should connect to at least one other, either by its own relations or by being the target of another's.`;
 
+/**
+ * Added to each instruction when the student reads the site in another language, so the new material
+ * comes out in it. The JSON structure and limits are unchanged; only the wording of the text is.
+ * Concept ids are the one field that must stay plain ASCII (they are checked and used in page links),
+ * and that rule is given only to the call that writes ids, because a model told about it once
+ * tends to strip accents from every field.
+ */
+export function languageRule(locale: Locale, withConceptIds = false): string {
+  if (locale === DEFAULT_LOCALE) return "";
+  const name = LOCALE_PROMPT_NAMES[locale];
+  const ids = withConceptIds
+    ? ` The one exception is an id field: build it from the concept's name using only unaccented lowercase ASCII letters, digits and hyphens (for example "fotosintesis"), because ids are checked and used in page links. Every other field, including the concept name, keeps its accents.`
+    : "";
+  return `
+
+Language: the student reads in ${name}. Write every piece of text you produce in ${name}: headings, sentences, definitions, terms, cues, theme names, concept names, explanations and verb phrases. Use ${name}'s normal spelling with all of its accents and special characters; never strip or simplify them. The transcript may be in another language: translate what you take from it, and keep proper names and technical terms that are normally left untranslated as they are. Keep the JSON structure exactly as specified.${ids} Every length limit above and in the schema applies to the ${name} text too.`;
+}
+
 // ---------- transcript preparation (deaf/HoH) ----------
 
 // Filler words ("um", "uh"). The group before and the letter after let us re-capitalise a sentence that began with one.
@@ -141,7 +160,8 @@ function parsing<T>(check: (v: unknown) => T) {
 export async function generateStudyMaterial(
   profile: DisabilityProfile,
   transcript: string,
-  deadline = Date.now() + RUN_BUDGET_MS
+  deadline = Date.now() + RUN_BUDGET_MS,
+  locale: Locale = DEFAULT_LOCALE
 ): Promise<StudyMaterial> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new GenerateError("Study material isn’t set up yet: the server has no API key.");
@@ -154,7 +174,7 @@ export async function generateStudyMaterial(
       const output = await generateWithFallback(ai, {
         contents: transcript,
         config: {
-          systemInstruction: DYSLEXIA_INSTRUCTION,
+          systemInstruction: DYSLEXIA_INSTRUCTION + languageRule(locale),
           temperature: 0.2,
           maxOutputTokens: 16384,
           responseMimeType: "application/json",
@@ -176,7 +196,7 @@ export async function generateStudyMaterial(
       generateWithFallback(ai, {
         contents: numbered,
         config: {
-          systemInstruction: DEAF_HOH_INSTRUCTION,
+          systemInstruction: DEAF_HOH_INSTRUCTION + languageRule(locale),
           temperature: 0.2,
           maxOutputTokens: 16384,
           responseMimeType: "application/json",
@@ -189,7 +209,7 @@ export async function generateStudyMaterial(
       generateWithFallback(ai, {
         contents: paragraphs.join("\n\n"),
         config: {
-          systemInstruction: CONCEPT_MAP_INSTRUCTION,
+          systemInstruction: CONCEPT_MAP_INSTRUCTION + languageRule(locale, true),
           temperature: 0.2,
           maxOutputTokens: 16384,
           responseMimeType: "application/json",

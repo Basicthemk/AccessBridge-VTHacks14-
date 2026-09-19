@@ -4,8 +4,8 @@ import { DraftError, generateAccommodationDraft } from "@/lib/accommodation-draf
 import type { DisabilityProfile } from "@/lib/profiles";
 
 // Drafts the email and saves it as a draft row. Nothing is sent here. The request has no
-// body: the profile comes from the signed-in student's row, so there is nothing to validate
-// or to make large.
+// body: the profile comes from the signed-in student's row and the lecture's title and
+// transcript from the database, so there is nothing to validate or to make large.
 export const maxDuration = 120;
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
 
   // Row-level security limits both reads to the caller's own rows.
   const [{ data: lecture }, { data: profileRow }] = await Promise.all([
-    supabase.from("lectures").select("id").eq("id", params.id).maybeSingle(),
+    supabase.from("lectures").select("id, title, transcript, transcript_status").eq("id", params.id).maybeSingle(),
     supabase.from("profiles").select("disability_profile").eq("id", user.id).maybeSingle(),
   ]);
   if (!lecture) return NextResponse.json({ error: "Lecture not found." }, { status: 404 });
@@ -47,7 +47,10 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
 
   let body: string;
   try {
-    body = await generateAccommodationDraft(profile);
+    body = await generateAccommodationDraft(profile, {
+      title: lecture.title,
+      transcript: lecture.transcript_status === "ready" ? lecture.transcript : null,
+    });
   } catch (err) {
     const e = err instanceof DraftError ? err : new DraftError("Writing the draft failed unexpectedly. Try again.", String(err));
     console.error("accommodation draft: failed", e.detail ?? e.message);

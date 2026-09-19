@@ -4,9 +4,6 @@
 
 export type TranscriptBlock = { seconds: number | null; text: string };
 
-// [m:ss], [mm:ss] or [h:mm:ss] at the very start of a paragraph.
-const MARK = /^\[(?:(\d{1,2}):)?(\d{1,3}):(\d{2})\]\s*/;
-
 function secondsOf(hours: string | undefined, minutes: string, seconds: string): number | null {
   const h = hours === undefined ? 0 : Number(hours);
   const m = Number(minutes);
@@ -15,18 +12,49 @@ function secondsOf(hours: string | undefined, minutes: string, seconds: string):
   return h * 3600 + m * 60 + s;
 }
 
+// The same marker anywhere in a paragraph. The model sometimes writes one per sentence.
+const ANY_MARK = /\[(?:(\d{1,2}):)?(\d{1,3}):(\d{2})\]\s*/g;
+/** Markers closer together than this are folded into one block, so a marker per sentence still reads as paragraphs. */
+const GROUP_SECONDS = 20;
+
+/**
+ * Breaks one paragraph at every valid marker inside it, then folds neighbours that start within
+ * GROUP_SECONDS of the block's start. A marker that isn't a real time (say [0:75]) stays as text.
+ */
+function splitAtMarks(p: string): TranscriptBlock[] {
+  const parts: TranscriptBlock[] = [];
+  let seconds: number | null = null;
+  let from = 0;
+  for (const m of Array.from(p.matchAll(ANY_MARK))) {
+    const at = secondsOf(m[1], m[2], m[3]);
+    if (at === null && m.index !== 0) continue;
+    parts.push({ seconds, text: p.slice(from, m.index).trim() });
+    seconds = at;
+    from = (m.index ?? 0) + m[0].length;
+  }
+  parts.push({ seconds, text: p.slice(from).trim() });
+
+  const out: TranscriptBlock[] = [];
+  for (const part of parts) {
+    if (part.text === "") continue;
+    const last = out[out.length - 1];
+    const start = last?.seconds;
+    if (last && start != null && part.seconds != null && part.seconds >= start && part.seconds - start < GROUP_SECONDS) {
+      last.text += ` ${part.text}`;
+    } else {
+      out.push({ ...part });
+    }
+  }
+  return out;
+}
+
 /** Splits a transcript into paragraphs, reading each one's start time if it has one. */
 export function parseTranscript(raw: string): TranscriptBlock[] {
   return raw
     .split(/\n\s*\n/)
     .map((p) => p.trim())
     .filter(Boolean)
-    .map((p) => {
-      const m = MARK.exec(p);
-      if (!m) return { seconds: null, text: p };
-      const seconds = secondsOf(m[1], m[2], m[3]);
-      return { seconds, text: p.slice(m[0].length).trim() };
-    })
+    .flatMap(splitAtMarks)
     .filter((b) => b.text !== "");
 }
 

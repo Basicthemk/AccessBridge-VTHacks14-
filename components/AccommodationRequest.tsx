@@ -58,11 +58,14 @@ export default function AccommodationRequest({
   profileLabel,
   studentEmail,
   resumable,
+  senderReady,
 }: {
   lectureId: string;
   profileLabel: string;
   studentEmail: string;
   resumable: ResumableDraft | null;
+  /** False when the server has no verified sending address, so professors’ emails would be rejected. */
+  senderReady: boolean;
 }) {
   const [stage, setStage] = useState<Stage>("idle");
   const [draftId, setDraftId] = useState<string | null>(null);
@@ -215,6 +218,16 @@ export default function AccommodationRequest({
         Draft a short email to your professor asking for what fits your <strong>{profileLabel}</strong> profile. You can
         change every word, and nothing is sent until you choose Send email.
       </p>
+
+      {!senderReady && (
+        <div role="group" aria-labelledby="sender-title" className="mt-3 rounded-md border-2 border-error bg-surface p-3">
+          <p id="sender-title" className="font-bold text-error">Sending isn’t set up for professors yet.</p>
+          <p className="mt-1">
+            You can still write and edit a draft, then copy it into your own email. Choosing Send email will be
+            rejected until the site owner verifies a sending address.
+          </p>
+        </div>
+      )}
 
       {/* Always in the page so progress is announced when its text changes. */}
       <p role="status" className="sr-only">{announce}</p>

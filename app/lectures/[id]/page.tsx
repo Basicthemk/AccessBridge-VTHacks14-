@@ -7,6 +7,7 @@ import TranscriptStatus from "@/components/TranscriptStatus";
 import GenerationStatus from "@/components/GenerationStatus";
 import StudyMaterialView from "@/components/StudyMaterial";
 import AccommodationRequest from "@/components/AccommodationRequest";
+import { senderVerified } from "@/lib/send-email";
 import { transcriptState } from "@/lib/transcript-status";
 import { generationState, type GeneratedContentRow } from "@/lib/generation-status";
 import { InvalidMaterialError, parseStudyMaterial, type StudyMaterial } from "@/lib/study-material";
@@ -153,7 +154,7 @@ export default async function LecturePage({ params }: { params: { id: string } }
           <section aria-labelledby="accommodations" className="mt-6">
             <h2 id="accommodations" className="text-3xl font-semibold">Ask for accommodations</h2>
             <div className="mt-3">
-              <AccommodationRequest lectureId={lecture.id} profileLabel={profile.label} studentEmail={user.email} resumable={resumable} />
+              <AccommodationRequest lectureId={lecture.id} profileLabel={profile.label} studentEmail={user.email} resumable={resumable} senderReady={senderVerified()} />
             </div>
           </section>
         )}

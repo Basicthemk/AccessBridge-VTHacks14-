@@ -8,6 +8,16 @@ import { Resend } from "resend";
  */
 export const FROM = process.env.EMAIL_FROM || "AccessBridge <onboarding@resend.dev>";
 
+/** False while the sender is still Resend's test address, which can't reach professors. */
+export const senderVerified = () => Boolean(process.env.EMAIL_FROM?.trim());
+
+if (!senderVerified()) {
+  console.warn(
+    "[email] EMAIL_FROM is not set. Sending from onboarding@resend.dev, which only delivers to the Resend account owner. " +
+      "Emails to professors will be rejected until a domain is verified in Resend and EMAIL_FROM is set."
+  );
+}
+
 export class SendError extends Error {
   constructor(public userMessage: string, public detail?: string) {
     super(userMessage);

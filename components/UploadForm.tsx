@@ -3,11 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import RecordPanel from "@/components/RecordPanel";
 import {
   ACCEPT_ATTR,
-  FORMATS_LABEL,
   LECTURE_BUCKET,
   MAX_BYTES,
   MAX_TITLE,
@@ -19,19 +19,23 @@ import {
 type Stage = "choose" | "uploading" | "saving" | "done";
 type Picked = { file: File; contentType: string; ext: string };
 type Mode = "file" | "record";
+type UploadError = { message: string; detail?: string; sessionEnded?: boolean };
 
 const primaryBtn = "btn btn-primary";
 const outlineBtn = "btn btn-outline";
 
 export default function UploadForm() {
   const router = useRouter();
+  const t = useTranslations("Upload");
+  const tc = useTranslations("Common");
+  const locale = useLocale();
   const inputRef = useRef<HTMLInputElement>(null);
   const xhrRef = useRef<XMLHttpRequest | null>(null);
   const [stage, setStage] = useState<Stage>("choose");
   const [picked, setPicked] = useState<Picked | null>(null);
   const [title, setTitle] = useState("");
   const [dragging, setDragging] = useState(false);
-  const [error, setError] = useState<{ message: string; detail?: string } | null>(null);
+  const [error, setError] = useState<UploadError | null>(null);
   const [loaded, setLoaded] = useState(0);
   const [announce, setAnnounce] = useState("");
   const [mode, setMode] = useState<Mode>("file");
@@ -53,7 +57,7 @@ export default function UploadForm() {
     if (busy || !files || files.length === 0) return;
     setError(null);
     if (files.length > 1) {
-      setError({ message: "Add one recording at a time. Drop a single file, then upload the next one afterwards." });
+      setError({ message: t("oneAtATime") });
       return;
     }
     const file = files[0];
@@ -64,7 +68,7 @@ export default function UploadForm() {
       return;
     }
     setPicked({ file, contentType: check.contentType, ext: check.ext });
-    setTitle((t) => t.trim() || titleFromFilename(file.name));
+    setTitle((prev) => prev.trim() || titleFromFilename(file.name));
   }
 
   function clearFile() {
@@ -96,7 +100,7 @@ export default function UploadForm() {
     }
     setError(null);
     setPicked({ file, contentType: check.contentType, ext: check.ext });
-    setTitle((t) => t.trim() || `Lecture recorded ${new Date().toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}`);
+    setTitle((prev) => prev.trim() || t("recordedTitle", { date: new Date().toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" }) }));
   }
 
   function sendToStorage(url: string, token: string, apikey: string, body: Blob, name: string) {
@@ -111,7 +115,7 @@ export default function UploadForm() {
         if (!e.lengthComputable) return;
         setLoaded(e.loaded);
         const pct = Math.floor((e.loaded / e.total) * 10) * 10;
-        setAnnounce(`Uploading, ${pct} percent`);
+        setAnnounce(t("announceUploading", { percent: pct }));
       };
       xhr.onload = () => {
         if (xhr.status >= 200 && xhr.status < 300) return resolve();
@@ -130,16 +134,12 @@ export default function UploadForm() {
     });
   }
 
-  function explain(status: number, detail: string): { message: string; detail?: string } {
-    if (status === 0)
-      return { message: "The upload was interrupted because the connection dropped. Check your internet, then choose Upload lecture to try again." };
-    if (status === 413)
-      return { message: `The server rejected the file as too large. The limit is ${formatBytes(MAX_BYTES)}.` };
-    if (status === 401 || status === 403)
-      return { message: "Your session has ended, so the upload was not saved. Sign in again, then retry.", detail };
-    if (status === 404 || /bucket not found/i.test(detail))
-      return { message: "Lecture storage isn’t set up yet, so nothing was saved. Try again later.", detail };
-    return { message: "The upload failed and nothing was saved. Try again in a moment.", detail: detail || `Status ${status}` };
+  function explain(status: number, detail: string): UploadError {
+    if (status === 0) return { message: t("errInterrupted") };
+    if (status === 413) return { message: t("errTooLarge", { limit: formatBytes(MAX_BYTES) }) };
+    if (status === 401 || status === 403) return { message: t("errSession"), detail, sessionEnded: true };
+    if (status === 404 || /bucket not found/i.test(detail)) return { message: t("errStorage"), detail };
+    return { message: t("errFailed"), detail: detail || t("errStatus", { status }) };
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -147,7 +147,7 @@ export default function UploadForm() {
     if (!picked || busy) return;
     const cleanTitle = title.trim();
     if (!cleanTitle) {
-      setError({ message: "Give the lecture a title so you can find it later." });
+      setError({ message: t("errNoTitle") });
       return;
     }
     setError(null);
@@ -176,14 +176,14 @@ export default function UploadForm() {
       setLoaded(0);
       setError(
         status === -1
-          ? { message: "Upload cancelled. Nothing was saved. Your file is still selected." }
+          ? { message: t("errCancelled") }
           : explain(status, detail)
       );
       return;
     }
 
     setStage("saving");
-    setAnnounce("Upload finished. Saving lecture.");
+    setAnnounce(t("announceFinished"));
     const { error: dbError } = await supabase
       .from("lectures")
       .insert({ user_id: session.user.id, title: cleanTitle, audio_url: path });
@@ -192,27 +192,26 @@ export default function UploadForm() {
       setStage("choose");
       setLoaded(0);
       setError({
-        message: "The recording uploaded but the lecture could not be saved, so we removed it. Try again.",
+        message: t("errSave"),
         detail: dbError.message,
       });
       return;
     }
 
     setStage("done");
-    setAnnounce("Lecture saved.");
+    setAnnounce(t("announceSaved"));
     router.refresh();
   }
 
   if (stage === "done" && picked) {
     return (
       <div className="rounded-lg border-2 border-success bg-surface p-4 md:p-5" role="status">
-        <h2 className="text-2xl font-semibold text-success">Lecture saved</h2>
+        <h2 className="text-2xl font-semibold text-success">{t("doneTitle")}</h2>
         <p className="mt-2">
-          <strong>{title.trim()}</strong> ({formatBytes(picked.file.size)}) is in your library.
-          Start its transcript from your lectures page.
+          {t.rich("doneBody", { title: title.trim(), size: formatBytes(picked.file.size), b: (chunks) => <strong>{chunks}</strong> })}
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
-          <Link href="/dashboard" className={primaryBtn}>Go to your lectures</Link>
+          <Link href="/dashboard" className={primaryBtn}>{t("goLectures")}</Link>
           <button
             type="button"
             className={outlineBtn}
@@ -224,7 +223,7 @@ export default function UploadForm() {
               setAnnounce("");
             }}
           >
-            Upload another lecture
+            {t("another")}
           </button>
         </div>
       </div>
@@ -233,7 +232,7 @@ export default function UploadForm() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-5" noValidate>
-      <div role="tablist" aria-label="How to add the lecture" className="flex flex-wrap gap-2" onKeyDown={onTabKey}>
+      <div role="tablist" aria-label={t("tabsLabel")} className="flex flex-wrap gap-2" onKeyDown={onTabKey}>
         {(["file", "record"] as Mode[]).map((m) => (
           <button
             key={m}
@@ -248,12 +247,12 @@ export default function UploadForm() {
             onClick={() => switchMode(m)}
             className={`btn ${mode === m ? "btn-primary" : "btn-outline"}`}
           >
-            {m === "file" ? "Upload a file" : "Record now"}
+            {m === "file" ? t("tabFile") : t("tabRecord")}
           </button>
         ))}
       </div>
       {recordingActive && (
-        <p className="text-sm">Stop the recording to switch back to uploading a file.</p>
+        <p className="text-sm">{t("stopToSwitch")}</p>
       )}
 
       {mode === "file" && (
@@ -297,19 +296,19 @@ export default function UploadForm() {
                 onClick={(e) => { e.stopPropagation(); clearFile(); }}
                 className="btn btn-quiet -ml-3 mt-2"
               >
-                Choose a different file
+                {t("chooseDifferent")}
               </button>
             )}
           </div>
         ) : (
           <>
             <p className="font-heading text-2xl font-semibold text-balance">
-              {dragging ? "Drop to add this recording" : "Drag a lecture recording here"}
+              {dragging ? t("dropActive") : t("dropIdle")}
             </p>
-            <p className="mt-3">or</p>
-            <button type="button" className={`${outlineBtn} mt-3`}>Choose a file</button>
+            <p className="mt-3">{t("or")}</p>
+            <button type="button" className={`${outlineBtn} mt-3`}>{t("chooseFile")}</button>
             <p className="mt-4 text-sm">
-              {FORMATS_LABEL}. Up to {formatBytes(MAX_BYTES)}.
+              {t("formats", { size: formatBytes(MAX_BYTES) })}
             </p>
           </>
         )}
@@ -328,14 +327,14 @@ export default function UploadForm() {
       )}
 
       <div>
-        <label htmlFor="title" className="font-bold">Lecture title</label>
+        <label htmlFor="title" className="font-bold">{t("titleLabel")}</label>
         <input
           id="title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           maxLength={MAX_TITLE}
           disabled={busy}
-          placeholder="For example, Statistics week 4: regression"
+          placeholder={t("titlePlaceholder")}
           className="field"
         />
       </div>
@@ -343,17 +342,17 @@ export default function UploadForm() {
       {busy && picked && (
         <div>
           <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 font-bold">
-            <span>{stage === "saving" ? "Saving lecture…" : "Uploading…"}</span>
+            <span>{stage === "saving" ? t("savingLecture") : t("uploading")}</span>
             <span className="flex flex-wrap gap-x-3">
               <span>{percent}%</span>
               <span>
-                {formatBytes(Math.min(loaded, picked.file.size))} of {formatBytes(picked.file.size)}
+                {t("loadedOf", { loaded: formatBytes(Math.min(loaded, picked.file.size)), total: formatBytes(picked.file.size) })}
               </span>
             </span>
           </div>
           <div
             role="progressbar"
-            aria-label="Upload progress"
+            aria-label={t("progress")}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={percent}
@@ -367,11 +366,11 @@ export default function UploadForm() {
       <div aria-live="assertive">
         {error && (
           <div role="alert" className="rounded-md border-2 border-error bg-surface px-3 py-2">
-            <p className="font-bold text-error">Problem: {error.message}</p>
-            {error.detail && <p className="mt-1 text-sm">Details: {error.detail}</p>}
-            {/session has ended/.test(error.message) && (
+            <p className="font-bold text-error">{tc("problem", { message: error.message })}</p>
+            {error.detail && <p className="mt-1 text-sm">{t("details", { detail: error.detail })}</p>}
+            {error.sessionEnded && (
               <Link href="/login" className="mt-2 inline-block font-bold text-accent underline underline-offset-4">
-                Go to sign in
+                {t("goSignIn")}
               </Link>
             )}
           </div>
@@ -382,15 +381,15 @@ export default function UploadForm() {
       <div className="flex flex-wrap items-center gap-3">
         {stage === "uploading" ? (
           <button type="button" className={outlineBtn} onClick={() => xhrRef.current?.abort()}>
-            Cancel upload
+            {t("cancel")}
           </button>
         ) : (
           <button type="submit" disabled={!picked || busy} className={primaryBtn}>
-            {stage === "saving" ? "Saving…" : "Upload lecture"}
+            {stage === "saving" ? t("savingBtn") : t("submit")}
           </button>
         )}
         {!busy && (
-          <Link href="/dashboard" className="btn btn-quiet">Back to your lectures</Link>
+          <Link href="/dashboard" className="btn btn-quiet">{tc("backToLectures")}</Link>
         )}
       </div>
     </form>

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { SessionEndedError, useExplainError } from "@/lib/client-errors";
 import { MAX_BODY, checkBody, checkProfessorEmail } from "@/lib/accommodation";
 
 export type ResumableDraft = { id: string; body: string; professorEmail: string; savedOn: string };
@@ -37,6 +39,7 @@ const primaryBtn = "btn btn-primary";
 const field = "field";
 
 function ErrorBox({ id, children }: { id?: string; children: React.ReactNode }) {
+  const tc = useTranslations("Common");
   return (
     <p
       id={id}
@@ -46,7 +49,7 @@ function ErrorBox({ id, children }: { id?: string; children: React.ReactNode }) 
       <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" className="mt-1 shrink-0">
         <path d="M8 2l6.5 12h-13z M8 6.5v3.5 M8 12v.5" />
       </svg>
-      <span>Problem: {children}</span>
+      <span>{tc("problem", { message: String(children) })}</span>
     </p>
   );
 }
@@ -65,6 +68,10 @@ export default function AccommodationRequest({
   /** False when the server has no verified sending address, so professors’ emails would be rejected. */
   senderReady: boolean;
 }) {
+  const t = useTranslations("Accommodation");
+  const te = useTranslations("Errors");
+  const locale = useLocale();
+  const explain = useExplainError();
   const [stage, setStage] = useState<Stage>("idle");
   const [draftId, setDraftId] = useState<string | null>(null);
   const [to, setTo] = useState("");
@@ -94,24 +101,19 @@ export default function AccommodationRequest({
     const res = await fetch(url, init);
     const type = res.headers.get("content-type") ?? "";
     if (res.redirected || !type.includes("application/json")) {
-      throw new Error("Your session has ended. Sign in again, then retry.");
+      throw new SessionEndedError();
     }
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error ?? "Something went wrong. Try again.");
+    if (!res.ok) throw new Error(data.error ?? te("generic"));
     return data;
   }
-
-  const explain = (err: unknown) =>
-    err instanceof TypeError
-      ? "The request didn’t go through because the connection dropped. Check your internet, then try again."
-      : (err as Error).message;
 
   // Writing a new draft replaces the message, so ask first if the student has changed it.
   function askNewDraft() {
     if (busy) return;
     if (draftId && body !== originalBody.current) {
       setConfirmingNew(true);
-      setAnnounce("You have edits in this message. Choose Replace with a new draft, or Keep my edits.");
+      setAnnounce(t("announceEdits"));
       setTimeout(() => keepRef.current?.focus(), 0);
       return;
     }
@@ -120,7 +122,7 @@ export default function AccommodationRequest({
 
   function keepEdits() {
     setConfirmingNew(false);
-    setAnnounce("Kept your edits.");
+    setAnnounce(t("announceKept"));
     setTimeout(() => newDraftBtnRef.current?.focus(), 0);
   }
 
@@ -137,8 +139,8 @@ export default function AccommodationRequest({
     setStage("editing");
     setAnnounce(
       saved
-        ? "Resumed your draft with the edits you made in this browser. Check the message, then choose Send email."
-        : "Resumed your draft. Check the message, then choose Send email."
+        ? t("announceResumedSaved")
+        : t("announceResumed")
     );
     setTimeout(() => toRef.current?.focus(), 0);
   }
@@ -148,7 +150,7 @@ export default function AccommodationRequest({
     setConfirmingNew(false);
     setStage("drafting");
     setProblem(null);
-    setAnnounce("Writing your draft. This can take a few seconds.");
+    setAnnounce(t("drafting"));
     try {
       const data = await callJson(`/api/lectures/${lectureId}/accommodation`, { method: "POST" });
       if (draftId) clearEdits(draftId);
@@ -159,7 +161,7 @@ export default function AccommodationRequest({
       setToError(null);
       setBodyError(null);
       setStage("editing");
-      setAnnounce("Draft ready. Enter your professor’s email address, read the message, then choose Send email.");
+      setAnnounce(t("announceReady"));
       // Wait for the fields to render, then land on the first one.
       setTimeout(() => toRef.current?.focus(), 0);
     } catch (err) {
@@ -180,7 +182,7 @@ export default function AccommodationRequest({
     if (!text.ok) return bodyRef.current?.focus();
 
     setStage("sending");
-    setAnnounce("Sending your email.");
+    setAnnounce(t("announceSending"));
     try {
       const data = await callJson(`/api/accommodations/${draftId}/send`, {
         method: "POST",
@@ -190,7 +192,7 @@ export default function AccommodationRequest({
       clearEdits(draftId);
       setSentTo(data.to);
       setStage("sent");
-      setAnnounce(`Email sent to ${data.to}.`);
+      setAnnounce(t("announceSent", { to: data.to }));
       setTimeout(() => sentRef.current?.focus(), 0);
     } catch (err) {
       setStage("editing");
@@ -213,16 +215,14 @@ export default function AccommodationRequest({
   return (
     <div className="max-w-prose">
       <p>
-        Draft a short email to your professor asking for what fits your <strong>{profileLabel}</strong> profile. You can
-        change every word, and nothing is sent until you choose Send email.
+        {t.rich("intro", { profile: profileLabel, b: (chunks) => <strong>{chunks}</strong> })}
       </p>
 
       {!senderReady && (
         <div role="group" aria-labelledby="sender-title" className="mt-4 rounded-md border-2 border-error bg-surface p-3">
-          <p id="sender-title" className="font-bold text-error">Sending isn’t set up for professors yet.</p>
+          <p id="sender-title" className="font-bold text-error">{t("senderTitle")}</p>
           <p className="mt-1">
-            You can still write and edit a draft, then copy it into your own email. Choosing Send email will be
-            rejected until the site owner verifies a sending address.
+            {t("senderBody")}
           </p>
         </div>
       )}
@@ -232,14 +232,14 @@ export default function AccommodationRequest({
 
       {stage === "idle" && resume && (
         <div role="group" aria-labelledby="resume-title" className="mt-4 rounded-md border-2 border-accent bg-surface p-3">
-          <p id="resume-title" className="font-bold">You have an unsent draft from {resume.savedOn}.</p>
-          <p className="mt-1">Pick up where you left off, or write a new one.</p>
+          <p id="resume-title" className="font-bold">{t("resumeTitle", { date: resume.savedOn })}</p>
+          <p className="mt-1">{t("resumeBody")}</p>
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <button type="button" onClick={() => resumeDraft(resume)} className={primaryBtn}>
-              Resume draft
+              {t("resume")}
             </button>
             <button type="button" onClick={draft} className={outlineBtn}>
-              Draft an email
+              {t("draft")}
             </button>
           </div>
         </div>
@@ -247,7 +247,7 @@ export default function AccommodationRequest({
 
       {stage === "idle" && !resume && (
         <button type="button" onClick={draft} className={`${outlineBtn} mt-4`}>
-          Draft an email
+          {t("draft")}
         </button>
       )}
 
@@ -256,7 +256,7 @@ export default function AccommodationRequest({
           <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" className="animate-spin">
             <path d="M8 2a6 6 0 1 0 6 6" />
           </svg>
-          Writing your draft. This can take a few seconds.
+          {t("drafting")}
         </p>
       )}
 
@@ -270,13 +270,13 @@ export default function AccommodationRequest({
             <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M3 8.5l3.5 3.5L13 4.5" />
             </svg>
-            Email sent
+            {t("sentTitle")}
           </p>
           <p className="mt-1">
-            Sent to <strong>{sentTo}</strong>. Replies go to <strong>{studentEmail}</strong>.
+            {t.rich("sentBody", { to: sentTo, student: studentEmail, b: (chunks) => <strong>{chunks}</strong> })}
           </p>
           <button type="button" onClick={reset} className={`${outlineBtn} mt-4`}>
-            Write another request
+            {t("another")}
           </button>
         </div>
       )}
@@ -284,7 +284,7 @@ export default function AccommodationRequest({
       {(stage === "editing" || stage === "sending") && (
         <div className="sheet mt-4 space-y-4">
           <div>
-            <label htmlFor="prof-email" className="font-bold">Professor’s email address</label>
+            <label htmlFor="prof-email" className="font-bold">{t("profEmail")}</label>
             <input
               ref={toRef}
               id="prof-email"
@@ -300,12 +300,12 @@ export default function AccommodationRequest({
               aria-describedby={toError ? "prof-email-error" : "prof-email-hint"}
               className={field}
             />
-            <p id="prof-email-hint" className="mt-2 text-sm">For example, name@school.edu</p>
+            <p id="prof-email-hint" className="mt-2 text-sm">{t("emailHint")}</p>
             {toError && <ErrorBox id="prof-email-error">{toError}</ErrorBox>}
           </div>
 
           <div>
-            <label htmlFor="prof-body" className="font-bold">Message</label>
+            <label htmlFor="prof-body" className="font-bold">{t("message")}</label>
             <textarea
               ref={bodyRef}
               id="prof-body"
@@ -320,8 +320,7 @@ export default function AccommodationRequest({
               className={field}
             />
             <p id="prof-body-hint" className="mt-2 text-sm">
-              Replace [Your name] with your name. {body.length.toLocaleString("en-US")} of{" "}
-              {MAX_BODY.toLocaleString("en-US")} characters.
+              {t("bodyHint", { count: body.length.toLocaleString(locale), max: MAX_BODY.toLocaleString(locale) })}
             </p>
             {bodyError && <ErrorBox id="prof-body-error">{bodyError}</ErrorBox>}
           </div>
@@ -330,10 +329,10 @@ export default function AccommodationRequest({
 
           <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
             <button type="button" onClick={send} aria-disabled={busy} className={primaryBtn}>
-              {stage === "sending" ? "Sending…" : "Send email"}
+              {stage === "sending" ? t("sending") : t("send")}
             </button>
             <button ref={newDraftBtnRef} type="button" onClick={askNewDraft} aria-disabled={busy} className="btn btn-quiet">
-              Write a new draft
+              {t("newDraft")}
             </button>
           </div>
 
@@ -343,15 +342,15 @@ export default function AccommodationRequest({
                 <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" className="mt-1 shrink-0">
                   <path d="M8 2l6.5 12h-13z M8 6.5v3.5 M8 12v.5" />
                 </svg>
-                <span>Replace your edits?</span>
+                <span>{t("replaceTitle")}</span>
               </p>
-              <p className="mt-1">A new draft replaces the message above, including the changes you made. The professor’s address stays.</p>
+              <p className="mt-1">{t("replaceBody")}</p>
               <div className="mt-3 flex flex-wrap items-center gap-3">
                 <button ref={keepRef} type="button" onClick={keepEdits} className={primaryBtn}>
-                  Keep my edits
+                  {t("keep")}
                 </button>
                 <button type="button" onClick={draft} aria-disabled={busy} className={outlineBtn}>
-                  Replace with a new draft
+                  {t("replace")}
                 </button>
               </div>
             </div>

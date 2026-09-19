@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import type { ReadAloudSection } from "@/lib/read-aloud";
+import { SessionEndedError, useExplainError } from "@/lib/client-errors";
 
 type Phase = "idle" | "loading" | "playing" | "paused" | "finished" | "failed";
 
@@ -11,14 +13,6 @@ const PLAY_EVENT = "ab-readaloud-play";
 const btn = "btn btn-sm btn-outline";
 
 const icon = { "aria-hidden": true, width: 16, height: 16, viewBox: "0 0 16 16", fill: "none", stroke: "currentColor", strokeWidth: 2.5 } as const;
-
-const STATE_TEXT: Record<Exclude<Phase, "failed">, string> = {
-  idle: "Ready",
-  loading: "Loading audio. This can take a few seconds.",
-  playing: "Playing",
-  paused: "Paused",
-  finished: "Finished",
-};
 
 export default function ReadAloud({
   lectureId,
@@ -30,6 +24,10 @@ export default function ReadAloud({
   /** Names the section in button labels, e.g. "summary". */
   label: string;
 }) {
+  const t = useTranslations("ReadAloud");
+  const tc = useTranslations("Common");
+  const te = useTranslations("Errors");
+  const explain = useExplainError();
   const audioRef = useRef<HTMLAudioElement>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [problem, setProblem] = useState<string | null>(null);
@@ -55,17 +53,17 @@ export default function ReadAloud({
     });
     const type = res.headers.get("content-type") ?? "";
     if (res.redirected || !type.includes("application/json")) {
-      throw new Error("Your session has ended. Sign in again, then retry.");
+      throw new SessionEndedError();
     }
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error ?? "Something went wrong. Try again.");
+    if (!res.ok) throw new Error(data.error ?? te("generic"));
     return data.url as string;
   }
 
   function fail(message: string) {
     setPhase("failed");
     setProblem(message);
-    say(`Read aloud ${label} failed. ${message}`);
+    say(t("announceFailed", { label, message }));
   }
 
   async function play(el: HTMLAudioElement) {
@@ -76,9 +74,9 @@ export default function ReadAloud({
       // Some browsers refuse to start sound after a network wait. The audio is ready, so ask for one more press.
       if (err instanceof DOMException && err.name === "NotAllowedError") {
         setPhase("paused");
-        say(`Audio for ${label} is ready. Choose Play to listen.`);
+        say(t("announceReady", { label }));
       } else {
-        fail("We couldn’t play the audio on this device. Try again.");
+        fail(t("cantPlayDevice"));
       }
     }
   }
@@ -95,7 +93,7 @@ export default function ReadAloud({
     }
 
     setPhase("loading");
-    say(`Loading audio for ${label}. This can take a few seconds.`);
+    say(t("announceLoading", { label }));
     try {
       const url = await fetchAudio();
       setSrc(url);
@@ -105,11 +103,7 @@ export default function ReadAloud({
       el.load();
       await play(el);
     } catch (err) {
-      fail(
-        err instanceof TypeError
-          ? "The request didn’t go through because the connection dropped. Check your internet, then try again."
-          : (err as Error).message
-      );
+      fail(explain(err));
     }
   }
 
@@ -120,11 +114,13 @@ export default function ReadAloud({
     void play(el);
   }
 
-  const buttonText =
-    phase === "loading" ? "Loading…" : phase === "playing" ? "Pause" : phase === "paused" ? "Play" : phase === "finished" ? "Play again" : phase === "failed" ? "Try again" : "Read aloud";
-  const buttonLabel = phase === "idle" || phase === "failed" || phase === "finished"
-    ? `${buttonText}: ${label}`
-    : `${buttonText} ${label}`;
+  const buttonText = t(phase);
+  const buttonLabel = t(
+    phase === "idle" ? "ariaIdle" : phase === "failed" ? "ariaFailed" : phase === "finished" ? "ariaFinished" : phase === "loading" ? "ariaLoading" : phase === "playing" ? "ariaPlaying" : "ariaPaused",
+    { label }
+  );
+  const stateText =
+    phase === "loading" ? t("stateLoading") : phase === "playing" ? t("statePlaying") : phase === "paused" ? t("statePaused") : phase === "finished" ? t("stateFinished") : "";
 
   return (
     <div>
@@ -141,15 +137,15 @@ export default function ReadAloud({
         </button>
 
         {hadAudio && (phase === "playing" || phase === "paused") && (
-          <button type="button" onClick={startOver} aria-label={`Start over ${label}`} className={btn}>
+          <button type="button" onClick={startOver} aria-label={t("startOverLabel", { label })} className={btn}>
             <svg {...icon}><path d="M3 8a5 5 0 1 0 1.8-3.8 M3 2.5v3h3" /></svg>
-            Start over
+            {t("startOver")}
           </button>
         )}
 
         {phase !== "failed" && phase !== "idle" && (
           <span className="chip border-accent text-accent">
-            {STATE_TEXT[phase]}
+            {stateText}
           </span>
         )}
       </div>
@@ -160,7 +156,7 @@ export default function ReadAloud({
           className="callout-error mt-2 inline-flex max-w-prose items-start gap-2"
         >
           <svg {...icon} className="mt-1 shrink-0"><path d="M8 2l6.5 12h-13z M8 6.5v3.5 M8 12v.5" /></svg>
-          <span>Problem: {problem}</span>
+          <span>{tc("problem", { message: problem })}</span>
         </p>
       )}
 
@@ -170,17 +166,17 @@ export default function ReadAloud({
       <audio
         ref={audioRef}
         preload="none"
-        onPlay={() => { setPhase("playing"); say(`Playing ${label}.`); }}
+        onPlay={() => { setPhase("playing"); say(t("announcePlaying", { label })); }}
         onPause={() => {
           const el = audioRef.current;
           // "pause" also fires when playback reaches the end; "ended" handles that case.
-          if (el && !el.ended) { setPhase((p) => (p === "playing" ? "paused" : p)); say(`Paused ${label}.`); }
+          if (el && !el.ended) { setPhase((p) => (p === "playing" ? "paused" : p)); say(t("announcePaused", { label })); }
         }}
-        onEnded={() => { setPhase("finished"); say(`Finished reading ${label}.`); }}
+        onEnded={() => { setPhase("finished"); say(t("announceFinished", { label })); }}
         onError={() => {
           // Most often the one-hour link has expired. Forget it so the next press asks for a fresh one.
           setSrc(null);
-          if (audioRef.current?.getAttribute("src")) fail("The audio couldn’t be played. Try again.");
+          if (audioRef.current?.getAttribute("src")) fail(t("cantPlay"));
         }}
       />
     </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { formatBytes } from "@/lib/upload";
 import {
   RECORDING_BITS_PER_SECOND,
@@ -9,7 +10,6 @@ import {
   formatClock,
   pickRecorderMime,
   recordingSupport,
-  spokenDuration,
 } from "@/lib/record";
 
 type Phase = "idle" | "requesting" | "recording" | "paused" | "review" | "confirmed" | "error";
@@ -26,29 +26,6 @@ type Props = {
   /** True while the microphone is open (recording or paused), so the parent can guard leaving. */
   onActiveChange: (active: boolean) => void;
 };
-
-function describeError(err: unknown): Problem {
-  const name = (err as { name?: string })?.name;
-  if (name === "NotAllowedError" || name === "SecurityError")
-    return {
-      message: "Microphone access is blocked, so nothing was recorded.",
-      help: "Allow the microphone for this site in your browser’s address-bar or site settings, then choose Try again. You can also switch to Upload a file.",
-    };
-  if (name === "NotFoundError" || name === "OverconstrainedError")
-    return {
-      message: "No microphone was found on this device.",
-      help: "Plug in or turn on a microphone, then choose Try again. You can also switch to Upload a file.",
-    };
-  if (name === "NotReadableError" || name === "AbortError")
-    return {
-      message: "The microphone could not be started. Another app or tab may be using it.",
-      help: "Close anything else that uses the microphone, then choose Try again.",
-    };
-  return {
-    message: "Recording could not start because of an unexpected problem.",
-    help: "Choose Try again. If it keeps failing, use Upload a file instead.",
-  };
-}
 
 function MicIcon() {
   return (
@@ -82,6 +59,30 @@ function PauseBars() {
 }
 
 export default function RecordPanel({ locked, onConfirm, onDiscard, onActiveChange }: Props) {
+  const t = useTranslations("Record");
+  const tc = useTranslations("Common");
+
+  // Spoken form of a length, for screen readers: "1 hour 5 minutes".
+  function spokenDuration(totalSeconds: number): string {
+    const s = Math.floor(totalSeconds);
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    const parts: string[] = [];
+    if (h) parts.push(t("hours", { count: h }));
+    if (m) parts.push(t("minutes", { count: m }));
+    if (sec || parts.length === 0) parts.push(t("seconds", { count: sec }));
+    return parts.join(" ");
+  }
+
+  function describeError(err: unknown): Problem {
+    const name = (err as { name?: string })?.name;
+    if (name === "NotAllowedError" || name === "SecurityError") return { message: t("errBlockedMsg"), help: t("errBlockedHelp") };
+    if (name === "NotFoundError" || name === "OverconstrainedError") return { message: t("errNoMicMsg"), help: t("errNoMicHelp") };
+    if (name === "NotReadableError" || name === "AbortError") return { message: t("errBusyMsg"), help: t("errBusyHelp") };
+    return { message: t("errUnexpectedMsg"), help: t("errUnexpectedHelp") };
+  }
+
   const [phase, setPhase] = useState<Phase>("idle");
   const [problem, setProblem] = useState<Problem | null>(null);
   const [notice, setNotice] = useState("");
@@ -150,7 +151,9 @@ export default function RecordPanel({ locked, onConfirm, onDiscard, onActiveChan
   // Spoken progress once a minute, never every second.
   const minutes = Math.floor(elapsed / 60);
   useEffect(() => {
-    if (phase === "recording" && minutes > 0) setAnnounce(`Recording, ${spokenDuration(minutes * 60)} so far.`);
+    if (phase === "recording" && minutes > 0) setAnnounce(t("announceMinute", { duration: spokenDuration(minutes * 60) }));
+    // Only a new minute or phase should announce, not every redraw (t and spokenDuration change each render).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [minutes, phase]);
 
   // The button that had focus disappears when review starts, so send focus to the review heading.
@@ -179,7 +182,7 @@ export default function RecordPanel({ locked, onConfirm, onDiscard, onActiveChan
     } catch (err) {
       setProblem(describeError(err));
       setPhase("error");
-      setAnnounce("Microphone unavailable.");
+      setAnnounce(t("announceUnavailable"));
       return;
     }
 
@@ -197,20 +200,20 @@ export default function RecordPanel({ locked, onConfirm, onDiscard, onActiveChan
         chunksRef.current.push(e.data);
         bytesRef.current += e.data.size;
         if (bytesRef.current >= RECORDING_STOP_BYTES && recorder.state !== "inactive") {
-          stopReasonRef.current = `Recording stopped by itself at the ${formatBytes(RECORDING_STOP_BYTES)} size limit. Everything up to that point is kept.`;
+          stopReasonRef.current = t("noticeSize", { limit: formatBytes(RECORDING_STOP_BYTES) });
           recorder.stop();
         }
       };
       recorder.onerror = () => {
-        stopReasonRef.current = "The recording was interrupted. What was captured so far is kept.";
+        stopReasonRef.current = t("noticeInterrupted");
         if (recorder.state !== "inactive") recorder.stop();
       };
       recorder.onstop = () => finish(recorder);
       // If the microphone is unplugged or revoked mid-recording, keep what we have.
-      stream.getAudioTracks().forEach((t) => {
-        t.onended = () => {
+      stream.getAudioTracks().forEach((track) => {
+        track.onended = () => {
           if (recorder.state === "inactive") return;
-          stopReasonRef.current = "The microphone stopped working, so the recording ended. What was captured so far is kept.";
+          stopReasonRef.current = t("noticeMic");
           recorder.stop();
         };
       });
@@ -221,12 +224,12 @@ export default function RecordPanel({ locked, onConfirm, onDiscard, onActiveChan
       clockRef.current = { before: 0, since: performance.now() };
       setElapsed(0);
       setPhase("recording");
-      setAnnounce("Recording started.");
+      setAnnounce(t("announceStarted"));
     } catch (err) {
       stream.getTracks().forEach((t) => t.stop());
       setProblem(
         (err as { name?: string })?.name === "NotSupportedError"
-          ? { message: "This browser can’t record audio in a format we can use.", help: "Try a current version of Chrome, Edge, Firefox or Safari, or use Upload a file." }
+          ? { message: t("errFormatMsg"), help: t("errFormatHelp") }
           : describeError(err)
       );
       setPhase("error");
@@ -242,14 +245,14 @@ export default function RecordPanel({ locked, onConfirm, onDiscard, onActiveChan
     const blob = new Blob(chunksRef.current, { type: type.split(";")[0] });
     chunksRef.current = [];
     if (blob.size === 0) {
-      setProblem({ message: "Nothing was captured. The recording is empty.", help: "Choose Try again and speak for a few seconds before stopping." });
+      setProblem({ message: t("errEmptyMsg"), help: t("errEmptyHelp") });
       setPhase("error");
       return;
     }
     if (!ext) {
       setProblem({
-        message: `This browser recorded in a format we can’t accept (${type || "unknown"}).`,
-        help: "Try a current version of Chrome, Edge, Firefox or Safari, or use Upload a file.",
+        message: t("errBadTypeMsg", { type: type || t("unknownType") }),
+        help: t("errFormatHelp"),
       });
       setPhase("error");
       return;
@@ -259,7 +262,7 @@ export default function RecordPanel({ locked, onConfirm, onDiscard, onActiveChan
     setRecorded({ blob, ext, seconds, url });
     setNotice(stopReasonRef.current);
     setPhase("review");
-    setAnnounce(`Recording stopped. ${spokenDuration(seconds)} recorded. Play it back, then use it or record again.`);
+    setAnnounce(t("announceStopped", { duration: spokenDuration(seconds) }));
   }
 
   function stop() {
@@ -275,12 +278,12 @@ export default function RecordPanel({ locked, onConfirm, onDiscard, onActiveChan
       bankElapsed();
       setElapsed(clockRef.current.before);
       setPhase("paused");
-      setAnnounce("Recording paused.");
+      setAnnounce(t("announcePaused"));
     } else if (r.state === "paused") {
       r.resume();
       clockRef.current.since = performance.now();
       setPhase("recording");
-      setAnnounce("Recording resumed.");
+      setAnnounce(t("announceResumed"));
     }
   }
 
@@ -296,7 +299,7 @@ export default function RecordPanel({ locked, onConfirm, onDiscard, onActiveChan
     const wasConfirmed = phase === "confirmed";
     clearRecording();
     setPhase("idle");
-    setAnnounce("Recording discarded. You can record again.");
+    setAnnounce(t("announceDiscarded"));
     if (wasConfirmed) onDiscard();
     setTimeout(() => mainBtnRef.current?.focus(), 0);
   }
@@ -306,7 +309,7 @@ export default function RecordPanel({ locked, onConfirm, onDiscard, onActiveChan
     const stamp = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "");
     const file = new File([recorded.blob], `lecture-recording-${stamp}.${recorded.ext}`, { type: recorded.blob.type });
     setPhase("confirmed");
-    setAnnounce("Recording ready. Add a title and choose Upload lecture.");
+    setAnnounce(t("announceReady"));
     onConfirm(file);
   }
 
@@ -314,15 +317,10 @@ export default function RecordPanel({ locked, onConfirm, onDiscard, onActiveChan
     return (
       <div role="alert" className="rounded-md border-2 border-error bg-surface px-3 py-2">
         <p className="font-bold text-error">
-          Problem: {support === "insecure"
-            ? "Recording needs a secure (https) connection, and this page isn’t on one."
-            : "This browser can’t record audio."}
+          {tc("problem", { message: support === "insecure" ? t("insecureTitle") : t("noRecorderTitle") })}
         </p>
         <p className="mt-1">
-          {support === "insecure"
-            ? "Open AccessBridge at its https address to record."
-            : "Try a current version of Chrome, Edge, Firefox or Safari."}{" "}
-          You can still use Upload a file.
+          {support === "insecure" ? t("insecureHelp") : t("noRecorderHelp")} {t("stillUpload")}
         </p>
       </div>
     );
@@ -330,11 +328,11 @@ export default function RecordPanel({ locked, onConfirm, onDiscard, onActiveChan
 
   const status: { label: string; icon?: React.ReactNode; tone: string } | null =
     phase === "recording"
-      ? { label: "Recording in progress", icon: <RecDot />, tone: "border-error text-error" }
+      ? { label: t("statusRecording"), icon: <RecDot />, tone: "border-error text-error" }
       : phase === "paused"
-      ? { label: "Recording paused", icon: <PauseBars />, tone: "border-accent text-accent" }
+      ? { label: t("statusPaused"), icon: <PauseBars />, tone: "border-accent text-accent" }
       : phase === "requesting"
-      ? { label: "Waiting for microphone permission", tone: "border-accent text-accent" }
+      ? { label: t("statusWaiting"), tone: "border-accent text-accent" }
       : null;
 
   return (
@@ -346,14 +344,14 @@ export default function RecordPanel({ locked, onConfirm, onDiscard, onActiveChan
           {phase === "idle" && (
             <p className="mb-4">
               {micState === "granted"
-                ? "Microphone access: already allowed for this site. Nothing records until you choose Start recording."
+                ? t("micGranted")
                 : micState === "denied"
-                ? "Microphone access: blocked in your browser settings. Allow it for this site, then choose Start recording."
-                : "Microphone access: not asked for yet. Your browser will ask for permission when you choose Start recording."}
+                ? t("micDenied")
+                : t("micUnknown")}
             </p>
           )}
           {phase === "requesting" && (
-            <p className="mb-4" role="status">Requesting microphone access. Choose Allow in the browser’s permission prompt.</p>
+            <p className="mb-4" role="status">{t("requesting")}</p>
           )}
 
           {status && (
@@ -364,7 +362,7 @@ export default function RecordPanel({ locked, onConfirm, onDiscard, onActiveChan
           )}
 
           {active && (
-            <p className="mb-4 font-heading text-5xl font-semibold tabular-nums" role="timer" aria-live="off" aria-label={`Elapsed ${spokenDuration(elapsed)}`}>
+            <p className="mb-4 font-heading text-5xl font-semibold tabular-nums" role="timer" aria-live="off" aria-label={t("elapsed", { duration: spokenDuration(elapsed) })}>
               <span aria-hidden="true">{formatClock(elapsed)}</span>
             </p>
           )}
@@ -379,18 +377,18 @@ export default function RecordPanel({ locked, onConfirm, onDiscard, onActiveChan
                 onClick={() => (active ? stop() : start())}
               >
                 {active ? <StopIcon /> : <MicIcon />}
-                {active ? "Stop recording" : phase === "requesting" ? "Requesting microphone…" : "Start recording"}
+                {active ? t("stop") : phase === "requesting" ? t("requestingBtn") : t("start")}
               </button>
               {active && (
                 <button type="button" className="btn btn-outline px-6 py-5 text-xl" onClick={togglePause}>
-                  {phase === "paused" ? "Resume recording" : "Pause recording"}
+                  {phase === "paused" ? t("resume") : t("pause")}
                 </button>
               )}
             </div>
           )}
           {active && (
             <p className="mt-3 text-sm">
-              Keep this tab open while you record. Stopping lets you play the recording back before anything is uploaded.
+              {t("keepOpen")}
             </p>
           )}
         </div>
@@ -398,10 +396,10 @@ export default function RecordPanel({ locked, onConfirm, onDiscard, onActiveChan
 
       {phase === "error" && problem && (
         <div role="alert" className="rounded-md border-2 border-error bg-surface px-3 py-2">
-          <p className="font-bold text-error">Problem: {problem.message}</p>
+          <p className="font-bold text-error">{tc("problem", { message: problem.message })}</p>
           {problem.help && <p className="mt-1">{problem.help}</p>}
           <button type="button" className="btn btn-outline btn-sm mt-3" onClick={() => { setProblem(null); setPhase("idle"); }}>
-            Try again
+            {t("tryAgain")}
           </button>
         </div>
       )}
@@ -413,28 +411,28 @@ export default function RecordPanel({ locked, onConfirm, onDiscard, onActiveChan
             tabIndex={-1}
             className="text-2xl font-semibold"
           >
-            {phase === "confirmed" ? "Recording ready to upload" : "Review your recording"}
+            {phase === "confirmed" ? t("readyTitle") : t("reviewTitle")}
           </h2>
           <p className="mt-1 flex flex-wrap gap-x-3">
-            <span className="font-bold">Length {formatClock(recorded.seconds)}</span>
+            <span className="font-bold">{t("length", { clock: formatClock(recorded.seconds) })}</span>
             <span>{formatBytes(recorded.blob.size)}</span>
             <span>{recorded.ext === "weba" ? "WEBM" : recorded.ext.toUpperCase()}</span>
           </p>
-          {notice && <p className="mt-2 font-bold" role="status">Note: {notice}</p>}
+          {notice && <p className="mt-2 font-bold" role="status">{t("note", { notice })}</p>}
           {/* eslint-disable-next-line jsx-a11y/media-has-caption -- the student's own voice; the transcript is what this app produces */}
-          <audio controls src={recorded.url} className="mt-3 w-full" aria-label="Playback of your recording" />
+          <audio controls src={recorded.url} className="mt-3 w-full" aria-label={t("playback")} />
           <div className="mt-4 flex flex-wrap gap-3">
             {phase === "review" && (
               <button type="button" className="btn btn-primary" onClick={confirm}>
-                Use this recording
+                {t("use")}
               </button>
             )}
             <button type="button" className="btn btn-outline" onClick={discard} aria-disabled={locked} disabled={locked}>
-              Discard and record again
+              {t("discard")}
             </button>
           </div>
           {phase === "review" && (
-            <p className="mt-3 text-sm">Nothing is uploaded until you choose Use this recording, then Upload lecture.</p>
+            <p className="mt-3 text-sm">{t("nothingUploaded")}</p>
           )}
         </div>
       )}

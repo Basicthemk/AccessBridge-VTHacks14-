@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { PROFILES, type DisabilityProfile } from "@/lib/profiles";
 import AppHeader from "@/components/AppHeader";
@@ -27,6 +28,10 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
 
 export default async function LecturePage({ params }: { params: { id: string } }) {
   if (!UUID.test(params.id)) notFound();
+  const t = await getTranslations("Lecture");
+  const tp = await getTranslations("Profiles");
+  const tc = await getTranslations("Common");
+  const locale = await getLocale();
   const supabase = createClient();
   const {
     data: { user },
@@ -90,7 +95,7 @@ export default async function LecturePage({ params }: { params: { id: string } }
         id: latest.id,
         body: latest.email_body,
         professorEmail: latest.professor_email ?? "",
-        savedOn: new Date(latest.created_at).toLocaleDateString("en-US", { dateStyle: "medium", timeZone: "UTC" }),
+        savedOn: new Date(latest.created_at).toLocaleDateString(locale, { dateStyle: "medium", timeZone: "UTC" }),
       };
     }
   }
@@ -103,58 +108,60 @@ export default async function LecturePage({ params }: { params: { id: string } }
       <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-3 pb-7 pt-6 md:px-5">
         <p>
           <Link href="/dashboard" className="btn btn-quiet -ml-3">
-            Back to your lectures
+            {tc("backToLectures")}
           </Link>
         </p>
 
         <h1 className="mt-2 max-w-4xl text-4xl font-semibold text-balance md:text-5xl">{lecture.title}</h1>
         <p className="mt-3 text-lg">
-          Uploaded{" "}
-          {new Date(lecture.created_at).toLocaleDateString("en-US", { dateStyle: "medium", timeZone: "UTC" })}. Study
-          profile: <strong>{profile?.label ?? "Not set"}</strong>.
+          {t.rich("uploadedLine", {
+            date: new Date(lecture.created_at).toLocaleDateString(locale, { dateStyle: "medium", timeZone: "UTC" }),
+            profile: profile ? tp(`${profile.value}.label`) : t("notSet"),
+            b: (chunks) => <strong>{chunks}</strong>,
+          })}
         </p>
 
         <SectionNav
           items={[
-            { id: "progress", label: "Progress", show: true },
-            { id: "study", label: "Study material", show: transcriptReady },
-            { id: "accommodations", label: "Ask for accommodations", show: !!(profile && user?.email) },
-            { id: "transcript", label: "Full transcript", show: transcriptReady },
+            { id: "progress", label: t("progress"), show: true },
+            { id: "study", label: t("study"), show: transcriptReady },
+            { id: "accommodations", label: t("accommodations"), show: !!(profile && user?.email) },
+            { id: "transcript", label: t("transcript"), show: transcriptReady },
           ].filter((i) => i.show)}
         />
 
         {/* The status controls stay in the page once the work finishes, so the change to "ready" is announced. */}
         <section id="progress" aria-labelledby="progress-heading" tabIndex={-1} className="band split concept-target">
-          <h2 id="progress-heading" className="split-side text-2xl font-semibold">Progress</h2>
+          <h2 id="progress-heading" className="split-side text-2xl font-semibold">{t("progress")}</h2>
           <div className="split-main space-y-3">
             <TranscriptStatus lectureId={lecture.id} state={tState} />
             {transcriptReady && profile && !loadFailed && (
-              <GenerationStatus lectureId={lecture.id} state={gState} profileLabel={profile.label} />
+              <GenerationStatus lectureId={lecture.id} state={gState} profileLabel={tp(`${profile.value}.label`)} />
             )}
           </div>
         </section>
 
         {transcriptReady && (
           <section id="study" aria-labelledby="study-heading" tabIndex={-1} className="band split concept-target">
-            <h2 id="study-heading" className="split-side text-2xl font-semibold md:sticky md:top-4 md:self-start">Study material</h2>
+            <h2 id="study-heading" className="split-side text-2xl font-semibold md:sticky md:top-4 md:self-start">{t("study")}</h2>
 
             <div className="split-main">
               {!profile && (
                 <p role="alert" className="callout-error max-w-prose">
-                  Problem: We couldn’t find your study profile, so we can’t tailor the material. Sign out and back in.
+                  {t("noProfile")}
                 </p>
               )}
 
               {loadFailed && (
                 <p role="alert" className="callout-error max-w-prose">
-                  Problem: We couldn’t load your study material. Refresh the page to try again.
+                  {t("loadFailed")}
                 </p>
               )}
 
               {material ? (
                 <StudyMaterialView material={material} lectureId={lecture.id} />
               ) : (
-                profile && !loadFailed && <p className="max-w-prose">Your study material will appear here.</p>
+                profile && !loadFailed && <p className="max-w-prose">{t("materialSoon")}</p>
               )}
             </div>
           </section>
@@ -162,11 +169,11 @@ export default async function LecturePage({ params }: { params: { id: string } }
 
         {profile && user?.email && (
           <section id="accommodations" aria-labelledby="accommodations-heading" tabIndex={-1} className="band split concept-target">
-            <h2 id="accommodations-heading" className="split-side text-2xl font-semibold md:sticky md:top-4 md:self-start">Ask for accommodations</h2>
+            <h2 id="accommodations-heading" className="split-side text-2xl font-semibold md:sticky md:top-4 md:self-start">{t("accommodations")}</h2>
             <div className="split-main">
-              <AccommodationRequest lectureId={lecture.id} profileLabel={profile.label} studentEmail={user.email} resumable={resumable} senderReady={senderVerified()} />
+              <AccommodationRequest lectureId={lecture.id} profileLabel={tp(`${profile.value}.label`)} studentEmail={user.email} resumable={resumable} senderReady={senderVerified()} />
               <div className="band">
-                <h3 className="text-xl font-semibold">Follow-up reminder</h3>
+                <h3 className="text-xl font-semibold">{t("followUp")}</h3>
                 <div className="mt-2">
                   <FollowUpReminder lectureId={lecture.id} lectureTitle={lecture.title} />
                 </div>
@@ -177,13 +184,13 @@ export default async function LecturePage({ params }: { params: { id: string } }
 
         {transcriptReady && (
           <section id="transcript" aria-labelledby="transcript-heading" tabIndex={-1} className="band split concept-target">
-            <h2 id="transcript-heading" className="split-side text-2xl font-semibold md:sticky md:top-4 md:self-start">Full transcript</h2>
+            <h2 id="transcript-heading" className="split-side text-2xl font-semibold md:sticky md:top-4 md:self-start">{t("transcript")}</h2>
             <div className={`split-main reading flow ${profileType === "dyslexia" ? "reading-relaxed" : ""}`}>
               {paragraphs.map((p, i) => (
                 <p key={i}>
                   {p.seconds !== null && (
                     <time dateTime={`PT${p.seconds}S`} className="mb-1 block text-sm font-bold tabular-nums text-accent">
-                      <span className="sr-only">Starts at </span>
+                      <span className="sr-only">{t("startsAt")}</span>
                       {formatTime(p.seconds)}
                     </time>
                   )}

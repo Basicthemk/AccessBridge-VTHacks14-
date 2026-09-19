@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { buildFollowUpIcs, describeFollowUp, icsFileName } from "@/lib/calendar";
 
 const outlineBtn = "btn btn-outline";
 
 export default function FollowUpReminder({ lectureId, lectureTitle }: { lectureId: string; lectureTitle: string }) {
+  const t = useTranslations("FollowUp");
   // Worked out in the browser so "in three days" uses the student's own clock and time zone.
   const [when, setWhen] = useState<string | null>(null);
   const [announce, setAnnounce] = useState("");
@@ -26,7 +28,7 @@ export default function FollowUpReminder({ lectureId, lectureTitle }: { lectureI
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       setProblem(false);
-      setAnnounce(`Downloaded ${a.download}. Open it to add the reminder for ${describeFollowUp(now)} to your calendar.`);
+      setAnnounce(t("downloaded", { file: a.download, when: describeFollowUp(now) }));
     } catch {
       setProblem(true);
       setAnnounce("");
@@ -36,21 +38,21 @@ export default function FollowUpReminder({ lectureId, lectureTitle }: { lectureI
   return (
     <div className="max-w-prose">
       <p>
-        Add a reminder to check for your professor’s reply. It’s a calendar file you open yourself; nothing is shared.
+        {t("intro")}
         {when && (
           <>
             {" "}
-            It’s set for <strong>{when}</strong>, your time.
+            {t.rich("setFor", { when, b: (chunks) => <strong>{chunks}</strong> })}
           </>
         )}
       </p>
       <button type="button" onClick={download} className={`${outlineBtn} mt-3`}>
-        Add follow-up to calendar
+        {t("button")}
       </button>
       <p role="status" className="mt-2">{announce}</p>
       {problem && (
         <p role="alert" className="callout-error mt-2 inline-flex max-w-prose">
-          Problem: We couldn’t make the calendar file. Try again.
+          {t("problem")}
         </p>
       )}
     </div>

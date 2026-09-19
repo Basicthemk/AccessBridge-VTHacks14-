@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { applyDefaultScript } from "@/lib/dyslexia-mode";
 import DyslexiaToggle from "@/components/DyslexiaToggle";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 // Renders the banner landmark. Pages put their <main id="main"> after it, not inside it.
 export default async function AppHeader() {
@@ -13,6 +15,7 @@ export default async function AppHeader() {
     ? await supabase.from("profiles").select("disability_profile").eq("id", user.id).maybeSingle()
     : { data: null };
   const defaultOn = profile?.disability_profile === "dyslexia";
+  const t = await getTranslations("Header");
 
   return (
     <>
@@ -25,11 +28,12 @@ export default async function AppHeader() {
             <img src="/brand/icon-transparent.svg" alt="" width={32} height={32} className="h-5 w-5" />
             AccessBridge
           </Link>
-          <nav aria-label="Account" className="flex flex-wrap items-center gap-2">
+          <nav aria-label={t("account")} className="flex flex-wrap items-center gap-2">
+            <LanguageSwitcher />
             <DyslexiaToggle defaultOn={defaultOn} />
             <form action="/auth/signout" method="post">
               <button className="btn btn-quiet">
-                Sign out
+                {t("signOut")}
               </button>
             </form>
           </nav>

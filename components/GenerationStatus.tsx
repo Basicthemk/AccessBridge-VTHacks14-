@@ -2,7 +2,9 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useSharedPoll } from "@/lib/use-shared-poll";
+import { SessionEndedError, useExplainError } from "@/lib/client-errors";
 import type { GenerationState } from "@/lib/generation-status";
 
 const btn = "btn btn-sm btn-outline";
@@ -17,6 +19,9 @@ export default function GenerationStatus({
   profileLabel: string;
 }) {
   const router = useRouter();
+  const t = useTranslations("GenerationStatus");
+  const tc = useTranslations("Common");
+  const explain = useExplainError();
   const statusRef = useRef<HTMLDivElement>(null);
   const [starting, setStarting] = useState(false);
   const [refreshing, startRefresh] = useTransition();
@@ -36,22 +41,18 @@ export default function GenerationStatus({
       const res = await fetch(`/api/lectures/${lectureId}/generate`, { method: "POST" });
       const type = res.headers.get("content-type") ?? "";
       if (res.redirected || !type.includes("application/json")) {
-        throw new Error("Your session has ended. Sign in again, then retry.");
+        throw new SessionEndedError();
       }
       const body = await res.json();
       if (!res.ok && res.status !== 409) {
-        throw new Error(body.error ?? "We couldn’t start the study material. Try again.");
+        throw new Error(body.error ?? t("startError"));
       }
       // Keep the progress message up until the refreshed page arrives.
       startRefresh(() => router.refresh());
       setStarting(false);
     } catch (err) {
       setStarting(false);
-      setProblem(
-        err instanceof TypeError
-          ? "The request didn’t go through because the connection dropped. Check your internet, then try again."
-          : (err as Error).message
-      );
+      setProblem(explain(err));
     }
   }
 
@@ -66,7 +67,7 @@ export default function GenerationStatus({
             <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" className="animate-spin">
               <path d="M8 2a6 6 0 1 0 6 6" />
             </svg>
-            Making your study material. This can take a minute or two.
+            {t("making")}
           </p>
         )}
         {!working && state.kind === "ready" && (
@@ -74,22 +75,22 @@ export default function GenerationStatus({
             <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M3 8.5l3.5 3.5L13 4.5" />
             </svg>
-            Study material ready
+            {t("ready")}
           </p>
         )}
         {!working && state.kind === "none" && (
           <p>
-            Your transcript is ready. Make study material for your <strong>{profileLabel}</strong> profile.
+            {t.rich("none", { profile: profileLabel, b: (chunks) => <strong>{chunks}</strong> })}
           </p>
         )}
       </div>
 
       {!working && state.kind === "none" && (
-        <button type="button" onClick={start} className="btn btn-sm btn-primary mt-3">Make study material</button>
+        <button type="button" onClick={start} className="btn btn-sm btn-primary mt-3">{t("make")}</button>
       )}
 
       {!working && state.kind === "ready" && (
-        <button type="button" onClick={start} className="btn btn-quiet -ml-3 mt-1">Make study material again</button>
+        <button type="button" onClick={start} className="btn btn-quiet -ml-3 mt-1">{t("again")}</button>
       )}
 
       {!working && state.kind === "failed" && (
@@ -98,16 +99,16 @@ export default function GenerationStatus({
             <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M8 2l6.5 12h-13z M8 6.5v3.5 M8 12v.5" />
             </svg>
-            Study material failed
+            {t("failed")}
           </p>
           <p className="mt-1">{state.message}</p>
-          <button type="button" onClick={start} className={`${btn} mt-2`}>Try again</button>
+          <button type="button" onClick={start} className={`${btn} mt-2`}>{t("tryAgain")}</button>
         </div>
       )}
 
       {problem && !working && (
         <p role="alert" className="callout-error mt-2">
-          Problem: {problem}
+          {tc("problem", { message: problem })}
         </p>
       )}
     </div>

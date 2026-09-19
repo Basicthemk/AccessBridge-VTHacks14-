@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
+import { SessionEndedError, useExplainError } from "@/lib/client-errors";
 
 export type ChatTurn = { id: string; question: string; answer: string };
 
@@ -29,6 +31,10 @@ export default function ChatThread({
   /** Put the cursor in the box when this appears, if focus is already inside the widget. */
   focusOnMount?: boolean;
 }) {
+  const t = useTranslations("Chat");
+  const tc = useTranslations("Common");
+  const te = useTranslations("Errors");
+  const explain = useExplainError();
   const [turns, setTurns] = useState<ChatTurn[]>(history);
   const [question, setQuestion] = useState("");
   const [asking, setAsking] = useState<string | null>(null);
@@ -56,12 +62,12 @@ export default function ChatThread({
     const q = question.trim();
     if (asking) return;
     if (!q) {
-      setProblem("Type a question first.");
+      setProblem(t("typeFirst"));
       return inputRef.current?.focus();
     }
     setAsking(q);
     setProblem(null);
-    setAnnounce(`${busyText}. This can take a few seconds.`);
+    setAnnounce(t("announceWait", { busy: busyText }));
     try {
       const res = await fetch(endpoint, {
         method: "POST",
@@ -69,19 +75,15 @@ export default function ChatThread({
         body: JSON.stringify({ question: q, ...extraBody }),
       });
       const type = res.headers.get("content-type") ?? "";
-      if (res.redirected || !type.includes("application/json")) throw new Error("Your session has ended. Sign in again, then retry.");
+      if (res.redirected || !type.includes("application/json")) throw new SessionEndedError();
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Something went wrong. Try again.");
-      setTurns((t) => [...t, { id: data.id, question: q, answer: data.answer }]);
+      if (!res.ok) throw new Error(data.error ?? te("generic"));
+      setTurns((all) => [...all, { id: data.id, question: q, answer: data.answer }]);
       setQuestion("");
       setNotSaved(data.saved === false);
-      setAnnounce(`Answer: ${data.answer}`);
+      setAnnounce(t("announceAnswer", { answer: data.answer }));
     } catch (err) {
-      setProblem(
-        err instanceof TypeError
-          ? "The request didn’t go through because the connection dropped. Check your internet, then try again."
-          : (err as Error).message
-      );
+      setProblem(explain(err));
       setAnnounce("");
     } finally {
       setAsking(null);
@@ -96,23 +98,23 @@ export default function ChatThread({
       {/* Always in the page so a new answer is read out when its text changes. */}
       <p role="status" className="sr-only">{announce}</p>
 
-      <ol ref={listRef} aria-label="Questions and answers" className="mt-4 space-y-4">
-        {turns.map((t) => (
-          <li key={t.id} className="sheet">
+      <ol ref={listRef} aria-label={t("listLabel")} className="mt-4 space-y-4">
+        {turns.map((turn) => (
+          <li key={turn.id} className="sheet">
             <p className="font-bold">
-              <span className="sr-only">Question: </span>
-              {t.question}
+              <span className="sr-only">{t("questionSr")}</span>
+              {turn.question}
             </p>
             <p className="mt-2 whitespace-pre-line">
-              <span className="font-bold text-accent">Answer: </span>
-              {t.answer}
+              <span className="font-bold text-accent">{t("answerLabel")}</span>
+              {turn.answer}
             </p>
           </li>
         ))}
         {asking && (
           <li className="sheet">
             <p className="font-bold">
-              <span className="sr-only">Question: </span>
+              <span className="sr-only">{t("questionSr")}</span>
               {asking}
             </p>
             <p className="chip mt-2 border-accent text-accent">
@@ -126,7 +128,7 @@ export default function ChatThread({
       </ol>
 
       {notSaved && (
-        <p className="mt-3 font-bold">Note: This answer couldn’t be saved, so it won’t be here after you reload.</p>
+        <p className="mt-3 font-bold">{t("notSaved")}</p>
       )}
 
       <form
@@ -136,7 +138,7 @@ export default function ChatThread({
           void ask();
         }}
       >
-        <label htmlFor="chat-question" className="font-bold">Your question</label>
+        <label htmlFor="chat-question" className="font-bold">{t("yourQuestion")}</label>
         <textarea
           ref={inputRef}
           id="chat-question"
@@ -157,7 +159,7 @@ export default function ChatThread({
           className="field"
         />
         <p id="chat-question-hint" className="mt-2 text-sm">
-          Press Enter to send, or Shift and Enter for a new line.
+          {t("hint")}
         </p>
 
         {problem && (
@@ -165,13 +167,13 @@ export default function ChatThread({
             <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" className="mt-1 shrink-0">
               <path d="M8 2l6.5 12h-13z M8 6.5v3.5 M8 12v.5" />
             </svg>
-            <span>Problem: {problem}</span>
+            <span>{tc("problem", { message: problem })}</span>
           </p>
         )}
 
         <div className="mt-3">
           <button type="submit" aria-disabled={!!asking} className="btn btn-primary">
-            {asking ? "Asking…" : "Ask"}
+            {asking ? t("asking") : t("ask")}
           </button>
         </div>
       </form>

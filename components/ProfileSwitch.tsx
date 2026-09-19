@@ -2,13 +2,20 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { PROFILES, type DisabilityProfile } from "@/lib/profiles";
+import { SessionEndedError, useExplainError } from "@/lib/client-errors";
 
 const outlineBtn = "btn btn-outline";
 const primaryBtn = "btn btn-primary";
 
 export default function ProfileSwitch({ current }: { current: DisabilityProfile | null }) {
   const router = useRouter();
+  const t = useTranslations("ProfileSwitch");
+  const tp = useTranslations("Profiles");
+  const te = useTranslations("Errors");
+  const tc = useTranslations("Common");
+  const explain = useExplainError();
   const [open, setOpen] = useState(false);
   const [choice, setChoice] = useState<DisabilityProfile | null>(current);
   const [saving, setSaving] = useState(false);
@@ -17,7 +24,7 @@ export default function ProfileSwitch({ current }: { current: DisabilityProfile 
   const openBtn = useRef<HTMLButtonElement>(null);
   const firstRadio = useRef<HTMLInputElement>(null);
 
-  const label = PROFILES.find((p) => p.value === current)?.label ?? "Not set";
+  const label = current ? tp(`${current}.label`) : "—";
 
   function show() {
     setChoice(current);
@@ -34,7 +41,7 @@ export default function ProfileSwitch({ current }: { current: DisabilityProfile 
 
   async function save() {
     if (saving) return;
-    if (!choice || choice === current) return close("Study profile unchanged.");
+    if (!choice || choice === current) return close(t("unchanged"));
     setSaving(true);
     setProblem(null);
     try {
@@ -44,18 +51,13 @@ export default function ProfileSwitch({ current }: { current: DisabilityProfile 
         body: JSON.stringify({ profile: choice }),
       });
       const type = res.headers.get("content-type") ?? "";
-      if (res.redirected || !type.includes("application/json")) throw new Error("Your session has ended. Sign in again, then retry.");
+      if (res.redirected || !type.includes("application/json")) throw new SessionEndedError();
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Something went wrong. Try again.");
-      const next = PROFILES.find((p) => p.value === choice)!.label;
-      close(`Study profile changed to ${next}.`);
+      if (!res.ok) throw new Error(data.error ?? te("generic"));
+      close(t("changed", { label: tp(`${choice}.label`) }));
       router.refresh();
     } catch (err) {
-      setProblem(
-        err instanceof TypeError
-          ? "The request didn’t go through because the connection dropped. Check your internet, then try again."
-          : (err as Error).message
-      );
+      setProblem(explain(err));
     } finally {
       setSaving(false);
     }
@@ -67,17 +69,16 @@ export default function ProfileSwitch({ current }: { current: DisabilityProfile 
 
       {!open && (
         <button ref={openBtn} type="button" onClick={show} className="btn btn-quiet -ml-3 mt-2">
-          Change study profile
+          {t("change")}
         </button>
       )}
 
       {open && (
         <fieldset className="mt-3 rounded-lg border border-border bg-surface p-3">
           {/* Floated so a legend that wraps on a narrow screen sits inside the box instead of straddling its top border. */}
-          <legend className="float-left w-full font-bold">Study profile (now: {label})</legend>
+          <legend className="float-left w-full font-bold">{t("legend", { label })}</legend>
           <p className="clear-both pt-2">
-            New study material will follow the profile you choose. Material you already made keeps its old shape until you
-            press “Make study material again” on that lecture.
+            {t("note")}
           </p>
           <div className="mt-3 space-y-2">
             {PROFILES.map((p, i) => {
@@ -99,8 +100,8 @@ export default function ProfileSwitch({ current }: { current: DisabilityProfile 
                     className="mt-1 h-4 w-4 accent-accent"
                   />
                   <span>
-                    <span className="block font-bold">{p.label}</span>
-                    <span className="mt-1 block text-sm">{p.blurb}</span>
+                    <span className="block font-bold">{tp(`${p.value}.label`)}</span>
+                    <span className="mt-1 block text-sm">{tp(`${p.value}.blurb`)}</span>
                   </span>
                 </label>
               );
@@ -108,15 +109,15 @@ export default function ProfileSwitch({ current }: { current: DisabilityProfile 
           </div>
           {problem && (
             <p role="alert" className="callout-error mt-3">
-              Problem: {problem}
+              {tc("problem", { message: problem })}
             </p>
           )}
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <button type="button" onClick={save} aria-disabled={saving} className={primaryBtn}>
-              {saving ? "Saving…" : "Save study profile"}
+              {saving ? t("saving") : t("save")}
             </button>
-            <button type="button" onClick={() => !saving && close("Study profile unchanged.")} className={outlineBtn}>
-              Cancel
+            <button type="button" onClick={() => !saving && close(t("unchanged"))} className={outlineBtn}>
+              {t("cancel")}
             </button>
           </div>
         </fieldset>

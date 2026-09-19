@@ -2,7 +2,9 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useSharedPoll } from "@/lib/use-shared-poll";
+import { SessionEndedError, useExplainError } from "@/lib/client-errors";
 import type { TranscriptState } from "@/lib/transcript-status";
 
 const btn = "btn btn-sm btn-outline";
@@ -19,6 +21,9 @@ export default function TranscriptStatus({
   title?: string;
 }) {
   const router = useRouter();
+  const t = useTranslations("TranscriptStatus");
+  const tc = useTranslations("Common");
+  const explain = useExplainError();
   const statusRef = useRef<HTMLDivElement>(null);
   const [starting, setStarting] = useState(false);
   const [refreshing, startRefresh] = useTransition();
@@ -38,27 +43,22 @@ export default function TranscriptStatus({
       const res = await fetch(`/api/lectures/${lectureId}/transcribe`, { method: "POST" });
       const type = res.headers.get("content-type") ?? "";
       if (res.redirected || !type.includes("application/json")) {
-        throw new Error("Your session has ended. Sign in again, then retry.");
+        throw new SessionEndedError();
       }
       const body = await res.json();
       if (!res.ok && res.status !== 409) {
-        throw new Error(body.error ?? "We couldn’t start the transcript. Try again.");
+        throw new Error(body.error ?? t("startError"));
       }
       // Keep the progress message up until the refreshed list arrives.
       startRefresh(() => router.refresh());
       setStarting(false);
     } catch (err) {
       setStarting(false);
-      setProblem(
-        err instanceof TypeError
-          ? "The request didn’t go through because the connection dropped. Check your internet, then try again."
-          : (err as Error).message
-      );
+      setProblem(explain(err));
     }
   }
 
   const working = processing || starting || refreshing;
-  const forLecture = title ? ` for ${title}` : "";
 
   return (
     <div className="max-w-prose">
@@ -70,8 +70,8 @@ export default function TranscriptStatus({
               <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M3 8.5l3.5 3.5L13 4.5" />
               </svg>
-              Transcript ready
-              {title && <span className="sr-only"> for {title}</span>}
+              {t("ready")}
+              {title && <span className="sr-only"> {t("forTitle", { title })}</span>}
             </p>
           )}
           {working && (
@@ -79,19 +79,19 @@ export default function TranscriptStatus({
               <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" className="animate-spin">
                 <path d="M8 2a6 6 0 1 0 6 6" />
               </svg>
-              Transcribing{forLecture}. This can take a few minutes.
+              {title ? t("transcribingFor", { title }) : t("transcribing")}
             </p>
           )}
-          {!working && state.kind === "pending" && <p className="font-bold">Transcript not started</p>}
+          {!working && state.kind === "pending" && <p className="font-bold">{t("notStarted")}</p>}
         </div>
         {!working && state.kind === "pending" && (
           <button
             type="button"
             onClick={start}
-            aria-label={`Start transcript${forLecture}`}
+            aria-label={title ? t("startFor", { title }) : t("start")}
             className={title ? btn : "btn btn-sm btn-primary"}
           >
-            Start transcript
+            {t("start")}
           </button>
         )}
       </div>
@@ -102,18 +102,18 @@ export default function TranscriptStatus({
             <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M8 2l6.5 12h-13z M8 6.5v3.5 M8 12v.5" />
             </svg>
-            Transcription failed{forLecture}
+            {title ? t("failedFor", { title }) : t("failed")}
           </p>
           <p className="mt-1">{state.message}</p>
-          <button type="button" onClick={start} aria-label={`Try again: transcript${forLecture}`} className={`${btn} mt-2`}>
-            Try again
+          <button type="button" onClick={start} aria-label={title ? t("tryAgainFor", { title }) : t("tryAgain")} className={`${btn} mt-2`}>
+            {t("tryAgain")}
           </button>
         </div>
       )}
 
       {problem && !working && (
         <p role="alert" className="callout-error mt-2">
-          Problem: {problem}
+          {tc("problem", { message: problem })}
         </p>
       )}
     </div>

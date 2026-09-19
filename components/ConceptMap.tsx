@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import ConceptLink from "@/components/ConceptLink";
 import { relationSentence, type Concept, type ConceptMap } from "@/lib/study-material";
 
@@ -9,18 +10,18 @@ import { relationSentence, type Concept, type ConceptMap } from "@/lib/study-mat
 const h3 = "text-xl font-semibold";
 
 export default function ConceptMapView({ map, unavailable }: { map: ConceptMap | undefined; unavailable?: boolean }) {
+  const t = useTranslations("Concept");
   return (
     <section aria-labelledby="concept-map">
-      <h3 id="concept-map" className={h3}>Concept map</h3>
+      <h3 id="concept-map" className={h3}>{t("title")}</h3>
 
       {!map && unavailable ? (
         <p className="mt-3">
-          The concept map couldn’t be made this time because the study-material service was busy or out of its daily limit.
-          Your captions and glossary below are complete. Choose “Make study material again” under Progress to try the map again later.
+          {t("unavailable")}
         </p>
       ) : !map ? (
         <p className="mt-3">
-          This study material was made before concept maps existed. Choose “Make study material again” under Progress to add one.
+          {t("old")}
         </p>
       ) : (
         <Body map={map} />
@@ -30,14 +31,14 @@ export default function ConceptMapView({ map, unavailable }: { map: ConceptMap |
 }
 
 function Body({ map }: { map: ConceptMap }) {
+  const t = useTranslations("Concept");
   const byId = new Map<string, Concept>();
   for (const t of map.themes) for (const c of t.concepts) byId.set(c.id, c);
 
   return (
     <>
       <p className="mt-3">
-        How the ideas in this lecture connect. Each idea is listed with what it links to, written as a sentence. The
-        last word of each sentence is a link to that idea.
+        {t("intro")}
       </p>
       <div className="flow-lg mt-4">
         {map.themes.map((theme, i) => (
@@ -49,7 +50,7 @@ function Body({ map }: { map: ConceptMap }) {
                   <h5 className="font-bold">{c.name}</h5>
                   <p className="mt-1">{c.explanation}</p>
                   {c.relations.length > 0 && (
-                    <ul aria-label={`Connections from ${c.name}`} className="mt-2 list-disc pl-4">
+                    <ul aria-label={t("connections", { name: c.name })} className="mt-2 list-disc pl-4">
                       {c.relations.map((r) => {
                         const to = byId.get(r.to)!;
                         // Same sentence as relationSentence(); the target name is a link.

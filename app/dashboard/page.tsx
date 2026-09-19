@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getLocale, getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { PROFILES, type DisabilityProfile } from "@/lib/profiles";
 import AppHeader from "@/components/AppHeader";
@@ -6,10 +7,16 @@ import ProfileSwitch from "@/components/ProfileSwitch";
 import TranscriptStatus from "@/components/TranscriptStatus";
 import { transcriptState } from "@/lib/transcript-status";
 
-export const metadata = { title: "Your lectures · AccessBridge" };
+export async function generateMetadata() {
+  const t = await getTranslations("Dashboard");
+  return { title: t("meta") };
+}
 export const dynamic = "force-dynamic";
 
 export default async function Dashboard() {
+  const t = await getTranslations("Dashboard");
+  const tp = await getTranslations("Profiles");
+  const locale = await getLocale();
   const supabase = createClient();
   const {
     data: { user },
@@ -32,14 +39,17 @@ export default async function Dashboard() {
       <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-3 pb-7 pt-6 md:px-5">
       <div className="split gap-y-5">
         <div className="split-side">
-          <h1 className="text-4xl font-semibold text-balance">Your lectures</h1>
+          <h1 className="text-4xl font-semibold text-balance">{t("title")}</h1>
           <Link href="/upload" className="btn btn-primary mt-4">
-            Upload a lecture
+            {t("upload")}
           </Link>
           <div className="mt-5 border-t border-border pt-4">
             <p>
-              Signed in as <strong>{user?.email}</strong>. Study profile:{" "}
-              <strong>{profile?.label ?? "Not set"}</strong>.
+              {t.rich("signedIn", {
+                email: user?.email ?? "",
+                profile: profile ? tp(`${profile.value}.label`) : t("notSet"),
+                b: (chunks) => <strong>{chunks}</strong>,
+              })}
             </p>
             <ProfileSwitch current={profileValue} />
           </div>
@@ -48,18 +58,18 @@ export default async function Dashboard() {
         <div className="split-main">
           {error && (
             <p role="alert" className="callout-error">
-              Problem: We couldn’t load your lectures. Refresh the page to try again.
+              {t("loadFailed")}
             </p>
           )}
 
           {!error && lectures?.length === 0 && (
             <section className="rounded-lg border-2 border-dashed border-accent p-5">
-              <h2 className="text-2xl font-semibold">No lectures yet</h2>
+              <h2 className="text-2xl font-semibold">{t("emptyTitle")}</h2>
               <p className="mt-2 max-w-prose">
-                Upload your first recording to start building your library.
+                {t("emptyBody")}
               </p>
               <Link href="/upload" className="btn btn-outline mt-4">
-                Upload a lecture
+                {t("upload")}
               </Link>
             </section>
           )}
@@ -78,10 +88,11 @@ export default async function Dashboard() {
                       </Link>
                     </h2>
                     <p className="mt-1 text-sm">
-                      Uploaded{" "}
-                      {new Date(l.created_at).toLocaleDateString("en-US", {
-                        dateStyle: "medium",
-                        timeZone: "UTC",
+                      {t("uploaded", {
+                        date: new Date(l.created_at).toLocaleDateString(locale, {
+                          dateStyle: "medium",
+                          timeZone: "UTC",
+                        }),
                       })}
                     </p>
                   </div>

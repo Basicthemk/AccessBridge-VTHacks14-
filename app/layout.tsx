@@ -5,6 +5,8 @@ import "@fontsource/opendyslexic/latin-700.css";
 import "./globals.css";
 import { APPLY_SAVED_SCRIPT } from "@/lib/dyslexia-mode";
 import SiteChat from "@/components/SiteChat";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getTranslations } from "next-intl/server";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -32,19 +34,23 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const locale = await getLocale();
+  const t = await getTranslations("Layout");
   return (
     // suppressHydrationWarning: the head script sets data-dyslexia before React hydrates.
-    <html lang="en" className={`${fraunces.variable} ${atkinson.variable}`} suppressHydrationWarning>
+    <html lang={locale} className={`${fraunces.variable} ${atkinson.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: APPLY_SAVED_SCRIPT }} />
       </head>
       <body className="min-h-screen font-body antialiased">
-        <a href="#main" className="skip-link">Skip to main content</a>
-        {children}
-        <SiteChat />
+        <NextIntlClientProvider>
+          <a href="#main" className="skip-link">{t("skip")}</a>
+          {children}
+          <SiteChat />
+        </NextIntlClientProvider>
       </body>
     </html>
   );

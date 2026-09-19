@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { DYSLEXIA_KEY } from "@/lib/dyslexia-mode";
 
 // The on/off text is swapped by CSS from <html data-dyslexia>, which is set before first
 // paint. That keeps the server HTML and the first client render identical, so the label
 // is right on the first frame and React has nothing to reconcile.
 export default function DyslexiaToggle({ defaultOn }: { defaultOn: boolean }) {
+  const t = useTranslations("Dyslexia");
   const [announcement, setAnnouncement] = useState("");
 
   // The inline script in AppHeader covers a full page load. After a client-side navigation
@@ -33,7 +35,7 @@ export default function DyslexiaToggle({ defaultOn }: { defaultOn: boolean }) {
     } catch {
       // Storage can be blocked. The mode still applies for this page view.
     }
-    setAnnouncement(next ? "Dyslexia mode is on." : "Dyslexia mode is off.");
+    setAnnouncement(next ? t("announceOn") : t("announceOff"));
   }
 
   return (
@@ -44,8 +46,8 @@ export default function DyslexiaToggle({ defaultOn }: { defaultOn: boolean }) {
         className="btn btn-sm border-transparent text-ink hover:text-accent"
       >
         <span>
-          Dyslexia mode: <span className="dys-off">Off</span>
-          <span className="dys-on">On</span>
+          {t("label")} <span className="dys-off">{t("off")}</span>
+          <span className="dys-on">{t("on")}</span>
         </span>
         <span className="switch" aria-hidden="true" />
       </button>

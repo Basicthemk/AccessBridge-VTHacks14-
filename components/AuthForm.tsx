@@ -3,14 +3,18 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { PROFILES, type DisabilityProfile } from "@/lib/profiles";
+
 
 const field = "field";
 const primaryBtn = "btn btn-primary w-full";
 
 export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
+  const t = useTranslations("Auth");
+  const tp = useTranslations("Profiles");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -35,7 +39,7 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
       });
       if (error) setError(error.message);
       else if (!data.session)
-        setNotice("Account created. Check your email for a confirmation link, then sign in.");
+        setNotice(t("confirmNotice"));
       else {
         router.push("/dashboard");
         router.refresh();
@@ -54,25 +58,25 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <h2 className="text-2xl font-semibold">
-        {isSignup ? "Create your account" : "Sign in"}
+        {isSignup ? t("signUpTitle") : t("signInTitle")}
       </h2>
 
       <div>
-        <label htmlFor="email" className="font-bold">Email</label>
+        <label htmlFor="email" className="font-bold">{t("email")}</label>
         <input id="email" name="email" type="email" required autoComplete="email" className={field} />
       </div>
       <div>
-        <label htmlFor="password" className="font-bold">Password</label>
+        <label htmlFor="password" className="font-bold">{t("password")}</label>
         <input
           id="password" name="password" type="password" required minLength={6}
           autoComplete={isSignup ? "new-password" : "current-password"} className={field}
         />
-        {isSignup && <p className="mt-2 text-sm">At least 6 characters.</p>}
+        {isSignup && <p className="mt-2 text-sm">{t("passwordHint")}</p>}
       </div>
 
       {isSignup && (
         <fieldset>
-          <legend className="font-bold">How should we shape your study material?</legend>
+          <legend className="font-bold">{t("profileLegend")}</legend>
           <div className="mt-2 space-y-2">
             {PROFILES.map((p) => {
               const selected = profile === p.value;
@@ -89,17 +93,17 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
                   />
                   <span>
                     <span className="block font-bold">
-                      {p.label}
+                      {tp(`${p.value}.label`)}
                       {selected && (
                         <span className="ml-2 inline-flex items-center gap-1 text-accent">
                           <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5">
                             <path d="M3 8.5l3.5 3.5L13 4.5" />
                           </svg>
-                          Selected
+                          {t("selected")}
                         </span>
                       )}
                     </span>
-                    <span className="mt-1 block text-sm">{p.blurb}</span>
+                    <span className="mt-1 block text-sm">{tp(`${p.value}.blurb`)}</span>
                   </span>
                 </label>
               );
@@ -111,7 +115,7 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
       <div aria-live="polite">
         {error && (
           <p role="alert" className="callout-error">
-            Error: {error}
+            {t("error", { message: error })}
           </p>
         )}
         {notice && (
@@ -122,13 +126,13 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
       </div>
 
       <button type="submit" disabled={busy} className={primaryBtn}>
-        {busy ? "Working…" : isSignup ? "Create account" : "Sign in"}
+        {busy ? t("working") : isSignup ? t("createAccount") : t("signIn")}
       </button>
 
       <p className="border-t border-border pt-4">
-        {isSignup ? "Already have an account? " : "New here? "}
+        {isSignup ? t("haveAccount") : t("newHere")}{" "}
         <Link href={isSignup ? "/login" : "/signup"} className="font-bold text-accent underline underline-offset-4">
-          {isSignup ? "Sign in" : "Create an account"}
+          {isSignup ? t("signIn") : t("createLink")}
         </Link>
       </p>
     </form>

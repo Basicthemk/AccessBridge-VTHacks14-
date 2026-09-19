@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { SessionEndedError, useExplainError } from "@/lib/client-errors";
 import ChatThread, { type ChatTurn } from "@/components/ChatThread";
 
 // The same widget serves every signed-in page. What it answers about depends on the page:
@@ -30,6 +32,10 @@ type LectureState =
 
 /** Loads the lecture's title and saved questions, then shows the existing lecture chat over them. */
 function LectureBody({ id, open }: { id: string; open: boolean }) {
+  const t = useTranslations("Chat");
+  const tc = useTranslations("Common");
+  const te = useTranslations("Errors");
+  const explain = useExplainError();
   const [state, setState] = useState<LectureState>({ stage: "loading" });
 
   const load = useCallback(async () => {
@@ -37,19 +43,15 @@ function LectureBody({ id, open }: { id: string; open: boolean }) {
     try {
       const res = await fetch(`/api/lectures/${id}/chat`);
       const type = res.headers.get("content-type") ?? "";
-      if (res.redirected || !type.includes("application/json")) throw new Error("Your session has ended. Sign in again, then retry.");
+      if (res.redirected || !type.includes("application/json")) throw new SessionEndedError();
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Something went wrong. Try again.");
+      if (!res.ok) throw new Error(data.error ?? te("generic"));
       setState(data.ready ? { stage: "ready", title: data.title, history: data.history } : { stage: "notready", title: data.title });
     } catch (err) {
-      setState({
-        stage: "failed",
-        message:
-          err instanceof TypeError
-            ? "The request didn’t go through because the connection dropped. Check your internet, then try again."
-            : (err as Error).message,
-      });
+      setState({ stage: "failed", message: explain(err) });
     }
+    // explain only wraps the current language's messages, so it need not restart the load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   useEffect(() => {
@@ -59,14 +61,14 @@ function LectureBody({ id, open }: { id: string; open: boolean }) {
   return (
     <>
       <p className="font-bold">
-        {state.stage === "ready" || state.stage === "notready" ? `About this lecture: ${state.title}` : "About this lecture"}
+        {state.stage === "ready" || state.stage === "notready" ? t("aboutLectureTitle", { title: state.title }) : t("aboutLecture")}
       </p>
       {state.stage === "loading" && (
         <p role="status" className="chip mt-3 border-accent text-accent">
           <svg {...icon} className="animate-spin">
             <path d="M8 2a6 6 0 1 0 6 6" />
           </svg>
-          Loading your earlier questions…
+          {t("loadingHistory")}
         </p>
       )}
       {state.stage === "failed" && (
@@ -75,23 +77,23 @@ function LectureBody({ id, open }: { id: string; open: boolean }) {
             <svg {...icon} className="mt-1 shrink-0">
               <path d="M8 2l6.5 12h-13z M8 6.5v3.5 M8 12v.5" />
             </svg>
-            <span>Problem: {state.message}</span>
+            <span>{tc("problem", { message: state.message })}</span>
           </p>
           <p className="mt-3">
-            <button type="button" onClick={() => void load()} className="btn btn-outline">Try again</button>
+            <button type="button" onClick={() => void load()} className="btn btn-outline">{t("tryAgain")}</button>
           </p>
         </div>
       )}
       {state.stage === "notready" && (
-        <p className="mt-3">This lecture’s transcript isn’t ready yet, so there is nothing to ask about. Check the Progress section of the page.</p>
+        <p className="mt-3">{t("notReady")}</p>
       )}
       {state.stage === "ready" && (
         <div className="mt-3">
           <ChatThread
             endpoint={`/api/lectures/${id}/chat`}
             history={state.history}
-            intro="Ask about anything in this lecture. Answers come only from the transcript, and if it doesn’t say, you’ll be told so."
-            busyText="Finding the answer in the transcript"
+            intro={t("lectureIntro")}
+            busyText={t("lectureBusy")}
             focusOnMount={open}
           />
         </div>
@@ -102,6 +104,7 @@ function LectureBody({ id, open }: { id: string; open: boolean }) {
 
 /** The panel for one page. It is keyed by page, so leaving the page throws the conversation away. */
 function Panel({ ctx, open, onClose, launcherRef }: { ctx: Context; open: boolean; onClose: () => void; launcherRef: React.RefObject<HTMLButtonElement> }) {
+  const t = useTranslations("Chat");
   const boxRef = useRef<HTMLDivElement>(null);
 
   // Opening puts focus in the panel; the box inside it takes over once it exists.
@@ -129,7 +132,7 @@ function Panel({ ctx, open, onClose, launcherRef }: { ctx: Context; open: boolea
     >
       <div className="flex items-center justify-between gap-3 border-b border-border p-3">
         <h2 id="site-chat-title" className="text-xl font-semibold">
-          {ctx.kind === "lecture" ? "Ask about this lecture" : "Help with AccessBridge"}
+          {ctx.kind === "lecture" ? t("lectureLaunch") : t("siteLaunch")}
         </h2>
         <button
           type="button"
@@ -139,7 +142,7 @@ function Panel({ ctx, open, onClose, launcherRef }: { ctx: Context; open: boolea
           }}
           className="btn btn-sm btn-quiet"
         >
-          Close
+          {t("close")}
         </button>
       </div>
       <div className="min-h-0 overflow-y-auto p-3">
@@ -147,13 +150,13 @@ function Panel({ ctx, open, onClose, launcherRef }: { ctx: Context; open: boolea
           <LectureBody id={ctx.id} open={open} />
         ) : (
           <>
-            <p className="font-bold">About using AccessBridge</p>
+            <p className="font-bold">{t("aboutSite")}</p>
             <div className="mt-3">
               <ChatThread
                 endpoint="/api/site-chat"
                 history={[]}
-                intro="Ask how to use AccessBridge: where to find things and what each feature does. I can’t help with anything else. This chat isn’t saved and clears when you leave this page."
-                busyText="Finding the answer"
+                intro={t("siteIntro")}
+                busyText={t("siteBusy")}
                 extraBody={{ page: ctx.page }}
                 focusOnMount={open}
               />
@@ -167,6 +170,7 @@ function Panel({ ctx, open, onClose, launcherRef }: { ctx: Context; open: boolea
 
 export default function SiteChat() {
   const path = usePathname();
+  const t = useTranslations("Chat");
   const ctx = contextFor(path ?? "");
   // Same-page context, so a different lecture, or leaving a lecture, starts a fresh panel that is closed.
   const key = ctx ? (ctx.kind === "lecture" ? `lecture:${ctx.id}` : `site:${path}`) : null;
@@ -183,7 +187,7 @@ export default function SiteChat() {
 
   if (!ctx || !key) return null;
   const open = openKey === key;
-  const label = ctx.kind === "lecture" ? "Ask about this lecture" : "Help with AccessBridge";
+  const label = ctx.kind === "lecture" ? t("lectureLaunch") : t("siteLaunch");
 
   return (
     <div className="site-chat">
@@ -204,7 +208,7 @@ export default function SiteChat() {
         <svg {...icon}>
           <path d="M2 3h12v8H7l-3 3v-3H2z" />
         </svg>
-        {open ? "Close chat" : label}
+        {open ? t("closeChat") : label}
       </button>
     </div>
   );

@@ -180,7 +180,7 @@ export default function UploadForm() {
         <h2 className="text-2xl font-semibold text-success">Lecture saved</h2>
         <p className="mt-2">
           <strong>{title.trim()}</strong> ({formatBytes(picked.file.size)}) is in your library.
-          Transcripts and study material come in a later step.
+          Start its transcript from your lectures page.
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
           <Link href="/dashboard" className={primaryBtn}>Go to your lectures</Link>

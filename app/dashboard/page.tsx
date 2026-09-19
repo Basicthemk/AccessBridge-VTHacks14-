@@ -2,6 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PROFILES } from "@/lib/profiles";
 import AppHeader from "@/components/AppHeader";
+import TranscriptStatus from "@/components/TranscriptStatus";
+import { transcriptState } from "@/lib/transcript-status";
 
 export const metadata = { title: "Your lectures · AccessBridge" };
 export const dynamic = "force-dynamic";
@@ -17,7 +19,7 @@ export default async function Dashboard() {
 
   const { data: lectures, error } = await supabase
     .from("lectures")
-    .select("id, title, transcript, created_at")
+    .select("id, title, transcript, transcript_status, transcript_error, transcript_started_at, created_at")
     .order("created_at", { ascending: false });
 
   return (
@@ -66,7 +68,7 @@ export default async function Dashboard() {
           {lectures.map((l) => (
             <li
               key={l.id}
-              className="flex flex-wrap items-baseline justify-between gap-2 rounded-md border border-border bg-surface p-3"
+              className="flex flex-wrap items-start justify-between gap-3 rounded-md border border-border bg-surface p-3"
             >
               <div>
                 <h2 className="text-xl font-semibold">{l.title}</h2>
@@ -78,9 +80,7 @@ export default async function Dashboard() {
                   })}
                 </p>
               </div>
-              <p className="font-bold">
-                {l.transcript ? "Transcript ready" : "Transcript not started"}
-              </p>
+              <TranscriptStatus lectureId={l.id} state={transcriptState(l)} />
             </li>
           ))}
         </ul>

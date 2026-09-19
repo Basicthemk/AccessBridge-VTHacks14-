@@ -13,6 +13,10 @@ create table public.lectures (
   title text not null,
   audio_url text,
   transcript text,
+  transcript_status text not null default 'pending'
+    check (transcript_status in ('pending', 'processing', 'ready', 'failed')),
+  transcript_error text,
+  transcript_started_at timestamptz,
   created_at timestamptz not null default now()
 );
 

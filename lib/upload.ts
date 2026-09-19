@@ -14,6 +14,10 @@ const TYPE_BY_EXT: Record<string, string> = {
   mov: "video/quicktime",
 };
 
+export function contentTypeForPath(path: string): string | undefined {
+  return TYPE_BY_EXT[extensionOf(path)];
+}
+
 export const ACCEPT_ATTR = Object.keys(TYPE_BY_EXT).map((e) => `.${e}`).join(",");
 export const FORMATS_LABEL = "MP3, M4A, WAV, OGG, WebM, MP4 or MOV";
 

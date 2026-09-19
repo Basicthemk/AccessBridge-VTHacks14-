@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
+import { useCheckMessage } from "@/lib/client-errors";
 import RecordPanel from "@/components/RecordPanel";
 import {
   ACCEPT_ATTR,
@@ -29,6 +30,7 @@ export default function UploadForm() {
   const t = useTranslations("Upload");
   const tc = useTranslations("Common");
   const locale = useLocale();
+  const checkText = useCheckMessage();
   const inputRef = useRef<HTMLInputElement>(null);
   const xhrRef = useRef<XMLHttpRequest | null>(null);
   const [stage, setStage] = useState<Stage>("choose");
@@ -64,7 +66,7 @@ export default function UploadForm() {
     const check = checkFile(file);
     if (!check.ok) {
       setPicked(null);
-      setError({ message: check.message });
+      setError({ message: checkText(check) });
       return;
     }
     setPicked({ file, contentType: check.contentType, ext: check.ext });
@@ -95,7 +97,7 @@ export default function UploadForm() {
   function useRecording(file: File) {
     const check = checkFile(file);
     if (!check.ok) {
-      setError({ message: check.message });
+      setError({ message: checkText(check) });
       return;
     }
     setError(null);

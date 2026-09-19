@@ -92,8 +92,12 @@ export function icsFileName(title: string): string {
 }
 
 /** "Tue, Sep 22 at 9:00 AM", for telling the student what the file contains. */
-export function describeFollowUp(now: Date): string {
+export function describeFollowUp(now: Date, locale = "en"): string {
   const d = followUpStart(now);
+  // Other languages get the browser's own wording of the same date and time; English keeps its phrasing.
+  if (locale !== "en") {
+    return d.toLocaleString(locale, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  }
   const day = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
   const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   return `${day} at ${time}`;

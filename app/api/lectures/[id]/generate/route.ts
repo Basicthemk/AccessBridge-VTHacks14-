@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverT } from "@/lib/server-messages";
 import { waitUntil } from "@vercel/functions";
 import { createClient } from "@/lib/supabase/server";
 import { STALE_AFTER_MS, transcriptState } from "@/lib/transcript-status";
@@ -17,14 +18,15 @@ export const dynamic = "force-dynamic";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function POST(_req: Request, { params }: { params: { id: string } }) {
+  const t = await serverT();
   if (!UUID.test(params.id)) {
-    return NextResponse.json({ error: "Lecture not found." }, { status: 404 });
+    return NextResponse.json({ error: t("notFound") }, { status: 404 });
   }
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Sign in again to continue." }, { status: 401 });
+  if (!user) return NextResponse.json({ error: t("signIn") }, { status: 401 });
 
   // Row-level security limits both reads to the caller's own rows.
   const [{ data: lecture }, { data: profileRow }] = await Promise.all([
@@ -35,10 +37,10 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
       .maybeSingle(),
     supabase.from("profiles").select("disability_profile").eq("id", user.id).maybeSingle(),
   ]);
-  if (!lecture) return NextResponse.json({ error: "Lecture not found." }, { status: 404 });
-  if (!profileRow) return NextResponse.json({ error: "We couldn’t find your study profile. Sign out and back in." }, { status: 422 });
+  if (!lecture) return NextResponse.json({ error: t("notFound") }, { status: 404 });
+  if (!profileRow) return NextResponse.json({ error: t("noProfile") }, { status: 422 });
   if (transcriptState(lecture).kind !== "ready" || !lecture.transcript?.trim()) {
-    return NextResponse.json({ error: "Finish the transcript first, then make the study material." }, { status: 422 });
+    return NextResponse.json({ error: t("finishTranscript") }, { status: 422 });
   }
 
   const profile = profileRow.disability_profile as DisabilityProfile;
@@ -56,7 +58,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   if (insertError) {
     if (insertError.code !== "23505") {
       console.error("generate: claim failed", insertError.message);
-      return NextResponse.json({ error: "We couldn’t start the study material. Try again." }, { status: 500 });
+      return NextResponse.json({ error: t("generateStartFailed") }, { status: 500 });
     }
     const cutoff = new Date(Date.now() - STALE_AFTER_MS).toISOString();
     const { data: claimed, error: claimError } = await supabase
@@ -68,10 +70,10 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
       .select("id");
     if (claimError) {
       console.error("generate: claim failed", claimError.message);
-      return NextResponse.json({ error: "We couldn’t start the study material. Try again." }, { status: 500 });
+      return NextResponse.json({ error: t("generateStartFailed") }, { status: 500 });
     }
     if (!claimed || claimed.length === 0) {
-      return NextResponse.json({ error: "The study material is already being made." }, { status: 409 });
+      return NextResponse.json({ error: t("generateAlready") }, { status: 409 });
     }
   }
 

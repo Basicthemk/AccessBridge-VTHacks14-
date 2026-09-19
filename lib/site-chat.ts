@@ -1,6 +1,11 @@
 import { GoogleGenAI } from "@google/genai";
 import { BadOutputError, generateWithFallback } from "./gemini";
 import { ChatError, MAX_QUESTION_CHARS, explainChatError } from "./lecture-chat";
+import { DEFAULT_LOCALE, LOCALE_PROMPT_NAMES, type Locale } from "../i18n/config";
+import en from "../messages/en.json";
+import es from "../messages/es.json";
+import fr from "../messages/fr.json";
+import pt from "../messages/pt.json";
 
 export { MAX_QUESTION_CHARS };
 const ANSWER_BUDGET_MS = 45_000;
@@ -39,19 +44,47 @@ Not available: editing or deleting lectures, changing the account email or passw
 
 How to answer: plain text, no markdown or bullet symbols. Short sentences and everyday words. Usually 1 to 4 sentences. For "how do I" questions give short numbered steps written as "1.", "2." on separate lines, naming the exact button or link text and including every button they must press in order (for example "Draft an email" comes before "Send email"). Say where to find it (which page and section).`;
 
-const systemFor = (page: SitePage) => `${INSTRUCTION}\n\nThe student is currently on ${PAGE_TEXT[page]}.`;
+// The screen names the model is told about are English. When the student reads the site in another
+// language those names have changed, so the model is given the translated name of each one to use.
+type Tree = Record<string, Record<string, string>>;
+const MESSAGES: Record<Locale, Tree> = { en, es, fr, pt } as unknown as Record<Locale, Tree>;
+const SCREEN_NAMES: [string, string][] = [
+  ["Header", "signOut"], ["Dashboard", "upload"], ["ProfileSwitch", "change"], ["Upload", "tabFile"], ["Upload", "tabRecord"],
+  ["Upload", "submit"], ["Record", "start"], ["Record", "stop"], ["Record", "discard"], ["TranscriptStatus", "start"],
+  ["Common", "tryAgain"], ["GenerationStatus", "make"], ["GenerationStatus", "again"], ["Lecture", "progress"],
+  ["Lecture", "study"], ["Lecture", "accommodations"], ["Lecture", "transcript"], ["Accommodation", "draft"],
+  ["Accommodation", "send"], ["Accommodation", "resume"], ["Accommodation", "newDraft"], ["FollowUp", "button"],
+  ["Chat", "lectureLaunch"], ["Study", "keyTerms"], ["Study", "summary"], ["Study", "outline"], ["Study", "glossary"],
+  ["Study", "emphasised"], ["Concept", "title"], ["ReadAloud", "idle"], ["Dyslexia", "label"],
+];
+
+function screenNames(locale: Locale): string {
+  const strip = (s: string) => s.replace(/:$/, "");
+  const pairs = SCREEN_NAMES.map(([ns, key]) => `"${strip(MESSAGES.en[ns][key])}" is shown as "${strip(MESSAGES[locale][ns][key])}"`);
+  for (const p of ["dyslexia", "deaf_hoh"]) {
+    const profiles = (m: Tree) => (m.Profiles as unknown as Record<string, { label: string }>)[p].label;
+    pairs.push(`the study profile "${profiles(MESSAGES.en)}" is shown as "${profiles(MESSAGES[locale])}"`);
+  }
+  return pairs.join("; ");
+}
+
+const systemFor = (page: SitePage, locale: Locale) =>
+  `${INSTRUCTION}\n\nThe student is currently on ${PAGE_TEXT[page]}.` +
+  (locale === DEFAULT_LOCALE
+    ? ""
+    : `\n\nThe student reads AccessBridge in ${LOCALE_PROMPT_NAMES[locale]}, so write your answer in ${LOCALE_PROMPT_NAMES[locale]}. Every button, link and heading named above appears on their screen in ${LOCALE_PROMPT_NAMES[locale]}: when you tell them what to press, use the ${LOCALE_PROMPT_NAMES[locale]} name, not the English one. On their screen, ${screenNames(locale)}.`);
 
 export type SiteAnswer = { answer: string; usage: { promptTokens: number; cachedTokens: number; outputTokens: number } };
 
 /** Answers a how-to-use-the-site question. Nothing about the student or their lectures is sent. */
-export async function answerSiteQuestion(question: string, page: SitePage): Promise<SiteAnswer> {
+export async function answerSiteQuestion(question: string, page: SitePage, locale: Locale = DEFAULT_LOCALE): Promise<SiteAnswer> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new ChatError("Help isn’t set up yet: the server has no API key.");
   const ai = new GoogleGenAI({ apiKey });
   try {
     return await generateWithFallback(ai, {
       contents: question,
-      config: { systemInstruction: systemFor(page), temperature: 0.2, maxOutputTokens: 2048 },
+      config: { systemInstruction: systemFor(page, locale), temperature: 0.2, maxOutputTokens: 2048 },
       parse: (response) => {
         if (response.candidates?.[0]?.finishReason === "MAX_TOKENS") throw new BadOutputError("cut off at the token limit");
         const answer = (response.text ?? "").replace(/\r\n?/g, "\n").trim();

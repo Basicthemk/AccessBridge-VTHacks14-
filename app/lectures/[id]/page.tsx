@@ -11,6 +11,7 @@ import AccommodationRequest from "@/components/AccommodationRequest";
 import FollowUpReminder from "@/components/FollowUpReminder";
 import SectionNav from "@/components/SectionNav";
 import { senderVerified } from "@/lib/send-email";
+import { localizeState, serverT } from "@/lib/server-messages";
 import { transcriptState } from "@/lib/transcript-status";
 import { formatTime, parseTranscript } from "@/lib/transcript-time";
 import { generationState, type GeneratedContentRow } from "@/lib/generation-status";
@@ -32,6 +33,7 @@ export default async function LecturePage({ params }: { params: { id: string } }
   const tp = await getTranslations("Profiles");
   const tc = await getTranslations("Common");
   const locale = await getLocale();
+  const ts = await serverT();
   const supabase = createClient();
   const {
     data: { user },
@@ -134,9 +136,9 @@ export default async function LecturePage({ params }: { params: { id: string } }
         <section id="progress" aria-labelledby="progress-heading" tabIndex={-1} className="band split concept-target">
           <h2 id="progress-heading" className="split-side text-2xl font-semibold">{t("progress")}</h2>
           <div className="split-main space-y-3">
-            <TranscriptStatus lectureId={lecture.id} state={tState} />
+            <TranscriptStatus lectureId={lecture.id} state={localizeState(ts, tState)} />
             {transcriptReady && profile && !loadFailed && (
-              <GenerationStatus lectureId={lecture.id} state={gState} profileLabel={tp(`${profile.value}.label`)} />
+              <GenerationStatus lectureId={lecture.id} state={localizeState(ts, gState)} profileLabel={tp(`${profile.value}.label`)} />
             )}
           </div>
         </section>
@@ -190,7 +192,7 @@ export default async function LecturePage({ params }: { params: { id: string } }
                 <p key={i}>
                   {p.seconds !== null && (
                     <time dateTime={`PT${p.seconds}S`} className="mb-1 block text-sm font-bold tabular-nums text-accent">
-                      <span className="sr-only">{t("startsAt")}</span>
+                      <span className="sr-only">{t("startsAt")}&nbsp;</span>
                       {formatTime(p.seconds)}
                     </time>
                   )}

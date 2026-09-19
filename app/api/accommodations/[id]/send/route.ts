@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkText, localize, serverT } from "@/lib/server-messages";
 import { createClient } from "@/lib/supabase/server";
 import { MAX_REQUEST_BYTES, buildEmail, checkBody, checkProfessorEmail } from "@/lib/accommodation";
 import { SendError, sendEmail } from "@/lib/send-email";
@@ -14,33 +15,34 @@ const SENDING_STALE_MS = 2 * 60 * 1000;
 const fail = (error: string, status: number) => NextResponse.json({ error }, { status });
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
-  if (!UUID.test(params.id)) return fail("Draft not found.", 404);
+  const t = await serverT();
+  if (!UUID.test(params.id)) return fail(t("draftNotFound"), 404);
 
   // Keep the body small before reading it. The header can lie, so the text is measured too.
   const declared = Number(req.headers.get("content-length") ?? 0);
-  if (declared > MAX_REQUEST_BYTES) return fail("That request is too large.", 413);
-  if (!(req.headers.get("content-type") ?? "").includes("application/json")) return fail("Send the request as JSON.", 415);
+  if (declared > MAX_REQUEST_BYTES) return fail(t("tooLarge"), 413);
+  if (!(req.headers.get("content-type") ?? "").includes("application/json")) return fail(t("sendJson"), 415);
   const raw = await req.text();
-  if (Buffer.byteLength(raw) > MAX_REQUEST_BYTES) return fail("That request is too large.", 413);
+  if (Buffer.byteLength(raw) > MAX_REQUEST_BYTES) return fail(t("tooLarge"), 413);
   let input: { professorEmail?: unknown; body?: unknown };
   try {
     input = JSON.parse(raw);
   } catch {
-    return fail("The request wasn’t valid JSON.", 400);
+    return fail(t("badJson"), 400);
   }
-  if (!input || typeof input !== "object") return fail("The request wasn’t valid JSON.", 400);
+  if (!input || typeof input !== "object") return fail(t("badJson"), 400);
 
   const to = checkProfessorEmail(input.professorEmail);
-  if (!to.ok) return fail(to.message, 422);
+  if (!to.ok) return fail(checkText(t, to), 422);
   const body = checkBody(input.body);
-  if (!body.ok) return fail(body.message, 422);
+  if (!body.ok) return fail(checkText(t, body), 422);
 
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return fail("Sign in again to continue.", 401);
-  if (!user.email) return fail("Your account has no email address for the professor to reply to.", 422);
+  if (!user) return fail(t("signIn"), 401);
+  if (!user.email) return fail(t("noAccountEmail"), 422);
 
   // Cap sends per student so the sender address can't be used as a relay.
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -51,9 +53,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     .gte("sent_at", since);
   if (countError) {
     console.error("accommodation send: count failed", countError.message);
-    return fail("We couldn’t check your sending limit. Try again.", 500);
+    return fail(t("sendLimitCheck"), 500);
   }
-  if ((count ?? 0) >= MAX_SENDS_PER_DAY) return fail("You’ve sent the most emails allowed for one day. Try again tomorrow.", 429);
+  if ((count ?? 0) >= MAX_SENDS_PER_DAY) return fail(t("sendLimitDay"), 429);
 
   // Claim the draft atomically so a double click can't send twice. Row-level security
   // limits the update to the student's own rows.
@@ -73,11 +75,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     .select("id");
   if (claimError) {
     console.error("accommodation send: claim failed", claimError.message);
-    return fail("We couldn’t start sending. Try again.", 500);
+    return fail(t("sendStartFailed"), 500);
   }
   if (!claimed || claimed.length === 0) {
     const { data: existing } = await supabase.from("accommodation_requests").select("status").eq("id", params.id).maybeSingle();
-    if (!existing) return fail("Draft not found.", 404);
+    if (!existing) return fail(t("draftNotFound"), 404);
     return fail(existing.status === "sent" ? "This email was already sent." : "This email is already being sent.", 409);
   }
 
@@ -104,6 +106,6 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       .from("accommodation_requests")
       .update({ status: "failed", error: e.userMessage, updated_at: new Date().toISOString() })
       .eq("id", params.id);
-    return fail(e.userMessage, 502);
+    return fail(localize(t, e.userMessage), 502);
   }
 }

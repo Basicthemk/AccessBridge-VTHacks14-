@@ -18,3 +18,10 @@ export function useExplainError() {
   return (err: unknown): string =>
     err instanceof SessionEndedError ? t("sessionEnded") : err instanceof TypeError ? t("connection") : (err as Error).message;
 }
+
+/** The message of a failed input check, in the student's language when the check names its message. */
+export function useCheckMessage() {
+  const t = useTranslations("Server");
+  return (result: { message: string; code?: string; params?: Record<string, string | number> }): string =>
+    result.code ? t(result.code as never, result.params as never) : result.message;
+}

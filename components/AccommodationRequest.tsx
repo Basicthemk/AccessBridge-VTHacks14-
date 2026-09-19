@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { SessionEndedError, useExplainError } from "@/lib/client-errors";
+import { SessionEndedError, useCheckMessage, useExplainError } from "@/lib/client-errors";
 import { MAX_BODY, checkBody, checkProfessorEmail } from "@/lib/accommodation";
 
 export type ResumableDraft = { id: string; body: string; professorEmail: string; savedOn: string };
@@ -72,6 +72,7 @@ export default function AccommodationRequest({
   const te = useTranslations("Errors");
   const locale = useLocale();
   const explain = useExplainError();
+  const checkText = useCheckMessage();
   const [stage, setStage] = useState<Stage>("idle");
   const [draftId, setDraftId] = useState<string | null>(null);
   const [to, setTo] = useState("");
@@ -175,8 +176,8 @@ export default function AccommodationRequest({
     if (busy || !draftId) return;
     const email = checkProfessorEmail(to);
     const text = checkBody(body);
-    setToError(email.ok ? null : email.message);
-    setBodyError(text.ok ? null : text.message);
+    setToError(email.ok ? null : checkText(email));
+    setBodyError(text.ok ? null : checkText(text));
     setProblem(null);
     if (!email.ok) return toRef.current?.focus();
     if (!text.ok) return bodyRef.current?.focus();

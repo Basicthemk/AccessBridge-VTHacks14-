@@ -1,19 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { buildFollowUpIcs, describeFollowUp, icsFileName } from "@/lib/calendar";
 
 const outlineBtn = "btn btn-outline";
 
 export default function FollowUpReminder({ lectureId, lectureTitle }: { lectureId: string; lectureTitle: string }) {
   const t = useTranslations("FollowUp");
+  const locale = useLocale();
   // Worked out in the browser so "in three days" uses the student's own clock and time zone.
   const [when, setWhen] = useState<string | null>(null);
   const [announce, setAnnounce] = useState("");
   const [problem, setProblem] = useState(false);
 
-  useEffect(() => setWhen(describeFollowUp(new Date())), []);
+  useEffect(() => setWhen(describeFollowUp(new Date(), locale)), [locale]);
 
   function download() {
     try {
@@ -28,7 +29,7 @@ export default function FollowUpReminder({ lectureId, lectureTitle }: { lectureI
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       setProblem(false);
-      setAnnounce(t("downloaded", { file: a.download, when: describeFollowUp(now) }));
+      setAnnounce(t("downloaded", { file: a.download, when: describeFollowUp(now, locale) }));
     } catch {
       setProblem(true);
       setAnnounce("");

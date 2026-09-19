@@ -44,7 +44,7 @@ export function titleFromFilename(name: string): string {
 
 export type FileCheck =
   | { ok: true; contentType: string; ext: string }
-  | { ok: false; message: string };
+  | { ok: false; message: string; code: string; params: Record<string, string | number> };
 
 export function checkFile(file: File): FileCheck {
   const ext = extensionOf(file.name);
@@ -53,15 +53,19 @@ export function checkFile(file: File): FileCheck {
     return {
       ok: false,
       message: `“${file.name}” is ${ext ? `a .${ext}` : "an unrecognised"} file. Choose a recording in ${FORMATS_LABEL} format.`,
+      code: ext ? "fileWrongExt" : "fileUnknownType",
+      params: { name: file.name, ext },
     };
   }
   if (file.size === 0) {
-    return { ok: false, message: `“${file.name}” is empty. Choose a different recording.` };
+    return { ok: false, message: `“${file.name}” is empty. Choose a different recording.`, code: "fileEmpty", params: { name: file.name } };
   }
   if (file.size > MAX_BYTES) {
     return {
       ok: false,
       message: `“${file.name}” is ${formatBytes(file.size)}. The limit is ${formatBytes(MAX_BYTES)}. Trim the recording or export it at a lower quality, then try again.`,
+      code: "fileTooBig",
+      params: { name: file.name, size: formatBytes(file.size), limit: formatBytes(MAX_BYTES) },
     };
   }
   return { ok: true, contentType, ext };

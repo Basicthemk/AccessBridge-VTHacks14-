@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { PROFILES, type DisabilityProfile } from "@/lib/profiles";
+import { localizeState, serverT } from "@/lib/server-messages";
 import AppHeader from "@/components/AppHeader";
 import ProfileSwitch from "@/components/ProfileSwitch";
 import TranscriptStatus from "@/components/TranscriptStatus";
@@ -17,6 +18,7 @@ export default async function Dashboard() {
   const t = await getTranslations("Dashboard");
   const tp = await getTranslations("Profiles");
   const locale = await getLocale();
+  const ts = await serverT();
   const supabase = createClient();
   const {
     data: { user },
@@ -96,7 +98,7 @@ export default async function Dashboard() {
                       })}
                     </p>
                   </div>
-                  <TranscriptStatus lectureId={l.id} state={transcriptState(l)} title={l.title} />
+                  <TranscriptStatus lectureId={l.id} state={localizeState(ts, transcriptState(l))} title={l.title} />
                 </li>
               ))}
             </ul>

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { localize, serverT } from "@/lib/server-messages";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { SpeechError, TTS_FORMAT, TTS_MODEL, TTS_VOICE, synthesize } from "@/lib/elevenlabs";
@@ -21,21 +22,22 @@ const MONTH_MS = 30 * DAY_MS;
 const fail = (error: string, status: number) => NextResponse.json({ error }, { status });
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
-  if (!UUID.test(params.id)) return fail("Lecture not found.", 404);
+  const t = await serverT();
+  if (!UUID.test(params.id)) return fail(t("notFound"), 404);
 
   const declared = Number(req.headers.get("content-length") ?? 0);
-  if (declared > MAX_REQUEST_BYTES) return fail("That request is too large.", 413);
-  if (!(req.headers.get("content-type") ?? "").includes("application/json")) return fail("Send the request as JSON.", 415);
+  if (declared > MAX_REQUEST_BYTES) return fail(t("tooLarge"), 413);
+  if (!(req.headers.get("content-type") ?? "").includes("application/json")) return fail(t("sendJson"), 415);
   const raw = await req.text();
-  if (Buffer.byteLength(raw) > MAX_REQUEST_BYTES) return fail("That request is too large.", 413);
+  if (Buffer.byteLength(raw) > MAX_REQUEST_BYTES) return fail(t("tooLarge"), 413);
   let input: { section?: unknown };
   try {
     input = JSON.parse(raw);
   } catch {
-    return fail("The request wasn’t valid JSON.", 400);
+    return fail(t("badJson"), 400);
   }
   if (!input || typeof input !== "object" || !isSection(input.section)) {
-    return fail("Choose summary, terms or outline.", 422);
+    return fail(t("chooseSection"), 422);
   }
   const section = input.section;
 
@@ -43,15 +45,15 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return fail("Sign in again to continue.", 401);
+  if (!user) return fail(t("signIn"), 401);
 
   // Row-level security limits every read to the signed-in student's own rows.
   const [{ data: profileRow }, { data: lecture }] = await Promise.all([
     supabase.from("profiles").select("disability_profile").eq("id", user.id).maybeSingle(),
     supabase.from("lectures").select("id").eq("id", params.id).maybeSingle(),
   ]);
-  if (!lecture) return fail("Lecture not found.", 404);
-  if (profileRow?.disability_profile !== "dyslexia") return fail("Read aloud is for the dyslexia study profile.", 403);
+  if (!lecture) return fail(t("notFound"), 404);
+  if (profileRow?.disability_profile !== "dyslexia") return fail(t("dyslexiaOnly"), 403);
 
   const { data: content, error: contentError } = await supabase
     .from("generated_content")
@@ -61,10 +63,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     .maybeSingle();
   if (contentError) {
     console.error("read aloud: material load failed", contentError.message);
-    return fail("We couldn’t load your study material. Try again.", 500);
+    return fail(t("materialLoadFailed"), 500);
   }
   if (!content || content.status !== "ready" || !content.content_json) {
-    return fail("Make your study material first, then read it aloud.", 409);
+    return fail(t("makeMaterialFirst"), 409);
   }
 
   let text: string;
@@ -74,10 +76,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     text = sectionText(material, section);
   } catch (err) {
     if (!(err instanceof InvalidMaterialError)) throw err;
-    return fail("The saved study material is in a form we can’t read aloud. Make it again.", 422);
+    return fail(t("materialUnreadable"), 422);
   }
-  if (!text.trim()) return fail("This section has nothing to read.", 422);
-  if (text.length > MAX_SECTION_CHARS) return fail(`This section is too long to read aloud (over ${MAX_SECTION_CHARS.toLocaleString("en-US")} characters). Read it on screen instead.`, 422);
+  if (!text.trim()) return fail(t("nothingToRead"), 422);
+  if (text.length > MAX_SECTION_CHARS) return fail(t("sectionTooLong", { max: MAX_SECTION_CHARS }), 422);
 
   const hash = createHash("sha256").update(`${TTS_MODEL}|${TTS_VOICE}|${TTS_FORMAT}|${text}`).digest("hex").slice(0, 40);
   const path = `${user.id}/${lecture.id}/${hash}.mp3`;
@@ -106,7 +108,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     .gte("created_at", monthAgo);
   if (recentError) {
     console.error("read aloud: budget check failed", recentError.message);
-    return fail("We couldn’t check your audio limit. Try again.", 500);
+    return fail(t("audioLimitCheck"), 500);
   }
   const dayAgo = Date.now() - DAY_MS;
   let usedMonth = 0;
@@ -116,10 +118,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     if (Date.parse(r.created_at as string) >= dayAgo) usedDay += r.characters as number;
   }
   if (usedDay + text.length > MAX_CHARS_PER_DAY) {
-    return fail("You’ve reached today’s read-aloud limit. Audio you’ve already made still plays. Try again tomorrow.", 429);
+    return fail(t("audioLimitDay"), 429);
   }
   if (usedMonth + text.length > MAX_CHARS_PER_MONTH) {
-    return fail("You’ve reached this month’s read-aloud limit. Audio you’ve already made still plays.", 429);
+    return fail(t("audioLimitMonth"), 429);
   }
 
   // Shared cap across all students. The function comes from supabase/readaloud-global-cap.sql;
@@ -130,10 +132,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       console.error("read aloud: shared cap NOT enforced, run supabase/readaloud-global-cap.sql", allError.message);
     } else {
       console.error("read aloud: shared cap check failed", allError.message);
-      return fail("We couldn’t check the audio limit. Try again.", 500);
+      return fail(t("audioLimitCheckGlobal"), 500);
     }
   } else if (Number(allUsed) + text.length > MAX_CHARS_ALL_STUDENTS_PER_MONTH) {
-    return fail("Read aloud has reached its limit for this month across all students. Audio you’ve already made still plays. It opens up again as older audio ages out.", 429);
+    return fail(t("audioLimitGlobal"), 429);
   }
 
   let audio: Buffer;
@@ -142,7 +144,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   } catch (err) {
     const e = err instanceof SpeechError ? err : new SpeechError("Making the audio failed unexpectedly. Try again.", String(err));
     console.error("read aloud: synthesis failed", e.detail ?? e.message);
-    return fail(e.userMessage, 502);
+    return fail(localize(t, e.userMessage), 502);
   }
 
   const { error: uploadError } = await supabase.storage
@@ -150,7 +152,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     .upload(path, audio, { contentType: "audio/mpeg", upsert: true });
   if (uploadError) {
     console.error("read aloud: upload failed", uploadError.message);
-    return fail("The audio was made but couldn’t be saved. Try again.", 500);
+    return fail(t("audioNotSaved"), 500);
   }
   const { error: rowError } = await supabase
     .from("read_aloud_audio")
@@ -164,6 +166,6 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   if (!rowError) await removeAudioFiles(supabase, { lectureId: lecture.id, section, keepPath: path });
 
   const url = await sign();
-  if (!url) return fail("The audio was made but we couldn’t open it. Try again.", 500);
+  if (!url) return fail(t("audioNotOpened"), 500);
   return NextResponse.json({ url, cached: false, characters: text.length });
 }

@@ -19,3 +19,11 @@ export const LOCALE_STORAGE_KEY = "ab-locale";
 export function isLocale(value: unknown): value is Locale {
   return typeof value === "string" && (LOCALES as readonly string[]).includes(value);
 }
+
+/** How each language is named to the model when it is asked to answer in it. */
+export const LOCALE_PROMPT_NAMES: Record<Locale, string> = {
+  en: "English",
+  es: "Spanish",
+  fr: "French",
+  pt: "Brazilian Portuguese",
+};

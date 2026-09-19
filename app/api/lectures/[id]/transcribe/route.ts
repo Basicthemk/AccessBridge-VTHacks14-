@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverT } from "@/lib/server-messages";
 import { waitUntil } from "@vercel/functions";
 import { createClient } from "@/lib/supabase/server";
 import { LECTURE_BUCKET, contentTypeForPath } from "@/lib/upload";
@@ -15,14 +16,15 @@ const SIGNED_URL_SECONDS = 120;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function POST(_req: Request, { params }: { params: { id: string } }) {
+  const t = await serverT();
   if (!UUID.test(params.id)) {
-    return NextResponse.json({ error: "Lecture not found." }, { status: 404 });
+    return NextResponse.json({ error: t("notFound") }, { status: 404 });
   }
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Sign in again to continue." }, { status: 401 });
+  if (!user) return NextResponse.json({ error: t("signIn") }, { status: 401 });
 
   // Row-level security limits this to the caller's own lectures.
   const { data: lecture } = await supabase
@@ -30,12 +32,12 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
     .select("id, audio_url")
     .eq("id", params.id)
     .maybeSingle();
-  if (!lecture) return NextResponse.json({ error: "Lecture not found." }, { status: 404 });
+  if (!lecture) return NextResponse.json({ error: t("notFound") }, { status: 404 });
 
   const audioPath = lecture.audio_url;
   const mimeType = audioPath ? contentTypeForPath(audioPath) : undefined;
   if (!audioPath || !mimeType) {
-    return NextResponse.json({ error: "This lecture has no recording to transcribe." }, { status: 422 });
+    return NextResponse.json({ error: t("noRecording") }, { status: 422 });
   }
 
   // Claim the lecture atomically so a double click can't start two runs.
@@ -53,10 +55,10 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
     .select("id");
   if (claimError) {
     console.error("transcribe: claim failed", claimError.message);
-    return NextResponse.json({ error: "We couldn’t start the transcript. Try again." }, { status: 500 });
+    return NextResponse.json({ error: t("transcribeStartFailed") }, { status: 500 });
   }
   if (!claimed || claimed.length === 0) {
-    return NextResponse.json({ error: "This lecture is already being transcribed." }, { status: 409 });
+    return NextResponse.json({ error: t("transcribeAlready") }, { status: 409 });
   }
 
   const lectureId = lecture.id;

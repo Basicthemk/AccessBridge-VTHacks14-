@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { BadOutputError, DeadlineError, generateWithFallback, isDailyQuota } from "./gemini";
 import { parseTranscript } from "./transcript-time";
+import { DEFAULT_LOCALE, LOCALE_PROMPT_NAMES, type Locale } from "../i18n/config";
 
 export const MAX_QUESTION_CHARS = 1000;
 const ANSWER_BUDGET_MS = 60_000;
@@ -74,12 +75,18 @@ Rules:
 - Answer in plain text, no markdown. Short sentences and everyday words. Usually 1 to 4 sentences; longer only if the question needs it.
 - If the transcript only covers part of what was asked, answer that part and say which part it does not cover.`;
 
-const systemFor = (title: string, transcript: string, trimmed: boolean) =>
+const systemFor = (title: string, transcript: string, trimmed: boolean, locale: Locale) =>
   `${INSTRUCTION}
 ${trimmed ? "\nThis lecture is long, so only the parts most related to the question are shown below, with […] where parts are left out. If the answer may be in a part you can't see, say the shown parts don't answer it.\n" : ""}
 <transcript title=${JSON.stringify(title.replace(/[\x00-\x1f\x7f<>]+/g, " ").slice(0, 120))}>
 ${transcript}
-</transcript>`;
+</transcript>${
+    locale === DEFAULT_LOCALE
+      ? ""
+      : `
+
+The student reads this site in ${LOCALE_PROMPT_NAMES[locale]}. Write your answer in ${LOCALE_PROMPT_NAMES[locale]}, even if the transcript is in another language. Keep names and technical terms from the transcript as they are.`
+  }`;
 
 /** Turns any failure into a ChatError whose message is safe to show. Shared with the site-help chat. */
 export function explainChatError(err: unknown): ChatError {
@@ -103,7 +110,7 @@ export type Answer = {
 };
 
 /** Answers one question from one lecture's transcript. */
-export async function answerLectureQuestion(lecture: { title: string; transcript: string }, question: string): Promise<Answer> {
+export async function answerLectureQuestion(lecture: { title: string; transcript: string }, question: string, locale: Locale = DEFAULT_LOCALE): Promise<Answer> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new ChatError("Questions aren’t set up yet: the server has no API key.");
   const ai = new GoogleGenAI({ apiKey });
@@ -112,7 +119,7 @@ export async function answerLectureQuestion(lecture: { title: string; transcript
     return await generateWithFallback(ai, {
       contents: question,
       config: {
-        systemInstruction: systemFor(lecture.title, text, trimmed),
+        systemInstruction: systemFor(lecture.title, text, trimmed, locale),
         temperature: 0.2,
         maxOutputTokens: 4096,
       },

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { localize, serverT } from "@/lib/server-messages";
 import { createClient } from "@/lib/supabase/server";
 import { DraftError, generateAccommodationDraft } from "@/lib/accommodation-draft";
 import type { DisabilityProfile } from "@/lib/profiles";
@@ -13,21 +14,22 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_DRAFTS_PER_DAY = 20;
 
 export async function POST(_req: Request, { params }: { params: { id: string } }) {
-  if (!UUID.test(params.id)) return NextResponse.json({ error: "Lecture not found." }, { status: 404 });
+  const t = await serverT();
+  if (!UUID.test(params.id)) return NextResponse.json({ error: t("notFound") }, { status: 404 });
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Sign in again to continue." }, { status: 401 });
+  if (!user) return NextResponse.json({ error: t("signIn") }, { status: 401 });
 
   // Row-level security limits both reads to the caller's own rows.
   const [{ data: lecture }, { data: profileRow }] = await Promise.all([
     supabase.from("lectures").select("id, title, transcript, transcript_status").eq("id", params.id).maybeSingle(),
     supabase.from("profiles").select("disability_profile").eq("id", user.id).maybeSingle(),
   ]);
-  if (!lecture) return NextResponse.json({ error: "Lecture not found." }, { status: 404 });
+  if (!lecture) return NextResponse.json({ error: t("notFound") }, { status: 404 });
   if (!profileRow) {
-    return NextResponse.json({ error: "We couldn’t find your study profile. Sign out and back in." }, { status: 422 });
+    return NextResponse.json({ error: t("noProfile") }, { status: 422 });
   }
   const profile = profileRow.disability_profile as DisabilityProfile;
 
@@ -39,10 +41,10 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
     .gte("created_at", since);
   if (countError) {
     console.error("accommodation draft: count failed", countError.message);
-    return NextResponse.json({ error: "We couldn’t start the draft. Try again." }, { status: 500 });
+    return NextResponse.json({ error: t("draftStartFailed") }, { status: 500 });
   }
   if ((count ?? 0) >= MAX_DRAFTS_PER_DAY) {
-    return NextResponse.json({ error: "You’ve made a lot of drafts today. Try again tomorrow." }, { status: 429 });
+    return NextResponse.json({ error: t("tooManyDrafts") }, { status: 429 });
   }
 
   let body: string;
@@ -54,7 +56,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   } catch (err) {
     const e = err instanceof DraftError ? err : new DraftError("Writing the draft failed unexpectedly. Try again.", String(err));
     console.error("accommodation draft: failed", e.detail ?? e.message);
-    return NextResponse.json({ error: e.userMessage }, { status: 502 });
+    return NextResponse.json({ error: localize(t, e.userMessage) }, { status: 502 });
   }
 
   const { data: row, error } = await supabase
@@ -64,7 +66,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
     .single();
   if (error || !row) {
     console.error("accommodation draft: save failed", error?.message);
-    return NextResponse.json({ error: "The draft was written but couldn’t be saved. Try again." }, { status: 500 });
+    return NextResponse.json({ error: t("draftNotSaved") }, { status: 500 });
   }
   return NextResponse.json({ id: row.id, body });
 }

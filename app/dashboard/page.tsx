@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PROFILES, type DisabilityProfile } from "@/lib/profiles";
 import { localizeState, serverT } from "@/lib/server-messages";
 import AppHeader from "@/components/AppHeader";
+import LectureRow from "@/components/LectureRow";
 import ProfileSwitch from "@/components/ProfileSwitch";
 import TranscriptStatus from "@/components/TranscriptStatus";
 import { transcriptState } from "@/lib/transcript-status";
@@ -79,27 +80,19 @@ export default async function Dashboard() {
           {lectures && lectures.length > 0 && (
             <ul className="border-b border-border">
               {lectures.map((l) => (
-                <li
+                <LectureRow
                   key={l.id}
-                  className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 border-t border-border py-4"
+                  id={l.id}
+                  title={l.title}
+                  uploaded={t("uploaded", {
+                    date: new Date(l.created_at).toLocaleDateString(locale, {
+                      dateStyle: "medium",
+                      timeZone: "UTC",
+                    }),
+                  })}
                 >
-                  <div className="min-w-0">
-                    <h2 className="text-xl font-semibold">
-                      <Link href={`/lectures/${l.id}`} className="text-accent underline underline-offset-4 hover:text-primary-dark">
-                        {l.title}
-                      </Link>
-                    </h2>
-                    <p className="mt-1 text-sm">
-                      {t("uploaded", {
-                        date: new Date(l.created_at).toLocaleDateString(locale, {
-                          dateStyle: "medium",
-                          timeZone: "UTC",
-                        }),
-                      })}
-                    </p>
-                  </div>
                   <TranscriptStatus lectureId={l.id} state={localizeState(ts, transcriptState(l))} title={l.title} />
-                </li>
+                </LectureRow>
               ))}
             </ul>
           )}

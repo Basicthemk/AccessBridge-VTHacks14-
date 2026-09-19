@@ -77,6 +77,33 @@ html[data-dyslexia="true"] {
   }
 }
 
+/* Reading surfaces (transcript, study material). Body already carries line height and
+   letter/word spacing from the tokens above, so dyslexia mode applies here for free;
+   these rules only set the measure and the gaps between blocks. */
+@layer components {
+  .reading {
+    max-width: 68ch;
+  }
+  .flow > * + * {
+    margin-top: var(--flow-space, var(--space-3));
+  }
+  .flow-lg > * + * {
+    margin-top: var(--flow-space-lg, var(--space-5));
+  }
+  /* Study material for the dyslexia profile: short lines and roomy spacing, even before the mode is on. */
+  .reading-relaxed {
+    max-width: 60ch;
+    line-height: max(1.8, var(--body-line-height));
+    --flow-space: var(--space-4);
+    --flow-space-lg: var(--space-6);
+  }
+  html[data-dyslexia="true"] .reading {
+    max-width: 60ch;
+    --flow-space: var(--space-4);
+    --flow-space-lg: var(--space-6);
+  }
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;

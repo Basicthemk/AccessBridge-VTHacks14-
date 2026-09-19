@@ -71,7 +71,11 @@ export default async function Dashboard() {
               className="flex flex-wrap items-start justify-between gap-3 rounded-md border border-border bg-surface p-3"
             >
               <div>
-                <h2 className="text-xl font-semibold">{l.title}</h2>
+                <h2 className="text-xl font-semibold">
+                  <Link href={`/lectures/${l.id}`} className="text-accent underline underline-offset-4 hover:text-primary-dark">
+                    {l.title}
+                  </Link>
+                </h2>
                 <p className="text-sm">
                   Uploaded{" "}
                   {new Date(l.created_at).toLocaleDateString("en-US", {

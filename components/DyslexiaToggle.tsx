@@ -41,10 +41,13 @@ export default function DyslexiaToggle({ defaultOn }: { defaultOn: boolean }) {
       <button
         type="button"
         onClick={toggle}
-        className="rounded-md border-2 border-accent px-3 py-2 font-bold text-accent hover:bg-accent hover:text-surface"
+        className="btn btn-sm border-transparent text-ink hover:text-accent"
       >
-        Dyslexia mode: <span className="dys-off">Off</span>
-        <span className="dys-on">On</span>
+        <span>
+          Dyslexia mode: <span className="dys-off">Off</span>
+          <span className="dys-on">On</span>
+        </span>
+        <span className="switch" aria-hidden="true" />
       </button>
       <span role="status" className="sr-only">{announcement}</span>
     </>

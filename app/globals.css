@@ -119,6 +119,57 @@ html[data-dyslexia="true"] {
   }
 }
 
+/* Shared building blocks. Three button tiers: primary is the one next step on a screen,
+   outline is a secondary action, quiet is an underlined text action for the least important ones. */
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border-2 px-4 py-3 font-bold transition-colors aria-disabled:opacity-60 disabled:opacity-60;
+  }
+  .btn-primary {
+    @apply border-primary-dark bg-primary-dark text-surface hover:border-ink hover:bg-ink;
+  }
+  .btn-outline {
+    @apply border-accent text-accent hover:bg-accent hover:text-surface;
+  }
+  .btn-quiet {
+    @apply border-transparent px-3 py-2 text-accent underline underline-offset-4 hover:text-primary-dark;
+  }
+  .btn-sm {
+    @apply px-3 py-2;
+  }
+
+  .field {
+    @apply mt-2 block w-full rounded-md border-2 border-accent bg-surface px-3 py-2 text-ink disabled:opacity-60;
+  }
+
+  /* Status chip: the border and icon carry the state, so colour is never the only signal. */
+  .chip {
+    @apply inline-flex items-center gap-2 rounded-sm border-2 px-2 py-1 font-bold;
+  }
+  .callout-error {
+    @apply rounded-md border-2 border-error bg-surface px-3 py-2 font-bold text-error;
+  }
+
+  /* The one working surface on a screen: the form, the drop zone, the draft. */
+  .sheet {
+    @apply rounded-lg border border-border bg-surface p-4 md:p-5;
+  }
+
+  /* Heading in a left rail, content in a reading column. */
+  .split {
+    @apply grid gap-x-6 gap-y-3 md:grid-cols-12;
+  }
+  .split-side {
+    @apply md:col-span-4;
+  }
+  .split-main {
+    @apply min-w-0 md:col-span-8;
+  }
+  .band {
+    @apply mt-6 border-t border-border pt-5;
+  }
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
@@ -181,4 +232,38 @@ main:focus {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Dyslexia toggle switch. The knob position follows <html data-dyslexia>, like the On/Off text beside it,
+   so it is right on the first frame. The word is still the primary signal; the knob is a second one. */
+.switch {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: var(--space-5);
+  height: var(--space-3);
+  border: 2px solid var(--color-accent);
+  border-radius: 9999px;
+  background: var(--color-surface);
+  transition: background-color 200ms ease;
+}
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 2px;
+  margin: auto 0;
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: 9999px;
+  background: var(--color-accent);
+  transition: transform 200ms ease, background-color 200ms ease;
+}
+html[data-dyslexia="true"] .switch {
+  background: var(--color-accent);
+}
+html[data-dyslexia="true"] .switch::after {
+  transform: translateX(var(--space-3));
+  background: var(--color-surface);
 }

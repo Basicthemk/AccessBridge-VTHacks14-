@@ -17,18 +17,18 @@ export default async function AppHeader() {
   return (
     <>
       <script dangerouslySetInnerHTML={{ __html: applyDefaultScript(defaultOn) }} />
-      <header className="mx-auto max-w-6xl px-3 pt-5 md:px-5">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
-          <Link href="/dashboard" className="inline-flex items-center gap-2 font-heading text-2xl font-semibold text-primary-dark">
+      <header className="mx-auto max-w-6xl px-3 pt-4 md:px-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
+          <Link href="/dashboard" className="inline-flex items-center gap-2 font-heading text-xl font-semibold text-primary-dark">
             {/* The mark is decorative: the name beside it is real text, so it keeps the page font. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/brand/icon-transparent.svg" alt="" width={32} height={32} className="h-5 w-5" />
             AccessBridge
           </Link>
-          <nav aria-label="Account" className="flex flex-wrap items-center gap-3">
+          <nav aria-label="Account" className="flex flex-wrap items-center gap-2">
             <DyslexiaToggle defaultOn={defaultOn} />
             <form action="/auth/signout" method="post">
-              <button className="rounded-md border-2 border-accent px-3 py-2 font-bold text-accent hover:bg-accent hover:text-surface">
+              <button className="btn btn-quiet">
                 Sign out
               </button>
             </form>

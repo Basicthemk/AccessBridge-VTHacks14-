@@ -31,6 +31,18 @@ const config: Config = {
       6: "var(--space-6)",
       7: "var(--space-7)",
     },
+    // Sizes only, no baked-in line heights: body text and captions inherit --body-line-height,
+    // so dyslexia mode's looser spacing reaches them. Headings get theirs from globals.css.
+    fontSize: {
+      sm: "0.875rem",
+      base: "1rem",
+      lg: "1.125rem",
+      xl: "1.375rem",
+      "2xl": "1.75rem",
+      "3xl": "2.25rem",
+      "4xl": "2.75rem",
+      "5xl": "3.5rem",
+    },
     borderRadius: {
       none: "0px",
       sm: "var(--radius-sm)",

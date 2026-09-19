@@ -32,18 +32,16 @@ function clearEdits(id: string) {
 
 type Stage = "idle" | "drafting" | "editing" | "sending" | "sent";
 
-const outlineBtn =
-  "rounded-md border-2 border-accent px-4 py-3 font-bold text-accent hover:bg-accent hover:text-surface aria-disabled:opacity-60";
-const primaryBtn =
-  "rounded-md bg-primary-dark px-4 py-3 font-bold text-surface transition-colors hover:bg-ink aria-disabled:opacity-60";
-const field = "mt-1 block w-full rounded-md border-2 border-accent bg-surface px-3 py-2 text-ink";
+const outlineBtn = "btn btn-outline";
+const primaryBtn = "btn btn-primary";
+const field = "field";
 
 function ErrorBox({ id, children }: { id?: string; children: React.ReactNode }) {
   return (
     <p
       id={id}
       role="alert"
-      className="mt-2 inline-flex max-w-prose items-start gap-2 rounded-md border-2 border-error bg-surface px-3 py-2 font-bold text-error"
+      className="callout-error mt-2 inline-flex max-w-prose items-start gap-2"
     >
       <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" className="mt-1 shrink-0">
         <path d="M8 2l6.5 12h-13z M8 6.5v3.5 M8 12v.5" />
@@ -220,7 +218,7 @@ export default function AccommodationRequest({
       </p>
 
       {!senderReady && (
-        <div role="group" aria-labelledby="sender-title" className="mt-3 rounded-md border-2 border-error bg-surface p-3">
+        <div role="group" aria-labelledby="sender-title" className="mt-4 rounded-md border-2 border-error bg-surface p-3">
           <p id="sender-title" className="font-bold text-error">Sending isn’t set up for professors yet.</p>
           <p className="mt-1">
             You can still write and edit a draft, then copy it into your own email. Choosing Send email will be
@@ -233,7 +231,7 @@ export default function AccommodationRequest({
       <p role="status" className="sr-only">{announce}</p>
 
       {stage === "idle" && resume && (
-        <div role="group" aria-labelledby="resume-title" className="mt-3 rounded-md border-2 border-accent bg-surface p-3">
+        <div role="group" aria-labelledby="resume-title" className="mt-4 rounded-md border-2 border-accent bg-surface p-3">
           <p id="resume-title" className="font-bold">You have an unsent draft from {resume.savedOn}.</p>
           <p className="mt-1">Pick up where you left off, or write a new one.</p>
           <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -248,13 +246,13 @@ export default function AccommodationRequest({
       )}
 
       {stage === "idle" && !resume && (
-        <button type="button" onClick={draft} className={`${outlineBtn} mt-3`}>
+        <button type="button" onClick={draft} className={`${outlineBtn} mt-4`}>
           Draft an email
         </button>
       )}
 
       {stage === "drafting" && (
-        <p className="mt-3 inline-flex items-center gap-2 rounded-sm border-2 border-accent px-2 py-1 font-bold text-accent">
+        <p className="chip mt-4 border-accent text-accent">
           <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" className="animate-spin">
             <path d="M8 2a6 6 0 1 0 6 6" />
           </svg>
@@ -266,7 +264,7 @@ export default function AccommodationRequest({
         <div
           ref={sentRef}
           tabIndex={-1}
-          className="mt-3 rounded-md border-2 border-success bg-surface p-3"
+          className="mt-4 rounded-lg border-2 border-success bg-surface p-4"
         >
           <p className="inline-flex items-center gap-2 font-bold text-success">
             <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -277,14 +275,14 @@ export default function AccommodationRequest({
           <p className="mt-1">
             Sent to <strong>{sentTo}</strong>. Replies go to <strong>{studentEmail}</strong>.
           </p>
-          <button type="button" onClick={reset} className={`${outlineBtn} mt-3`}>
+          <button type="button" onClick={reset} className={`${outlineBtn} mt-4`}>
             Write another request
           </button>
         </div>
       )}
 
       {(stage === "editing" || stage === "sending") && (
-        <div className="mt-4 space-y-4">
+        <div className="sheet mt-4 space-y-4">
           <div>
             <label htmlFor="prof-email" className="font-bold">Professor’s email address</label>
             <input
@@ -302,7 +300,7 @@ export default function AccommodationRequest({
               aria-describedby={toError ? "prof-email-error" : "prof-email-hint"}
               className={field}
             />
-            <p id="prof-email-hint" className="mt-1 text-sm">For example, name@school.edu</p>
+            <p id="prof-email-hint" className="mt-2 text-sm">For example, name@school.edu</p>
             {toError && <ErrorBox id="prof-email-error">{toError}</ErrorBox>}
           </div>
 
@@ -321,7 +319,7 @@ export default function AccommodationRequest({
               aria-describedby={bodyError ? "prof-body-error" : "prof-body-hint"}
               className={field}
             />
-            <p id="prof-body-hint" className="mt-1 text-sm">
+            <p id="prof-body-hint" className="mt-2 text-sm">
               Replace [Your name] with your name. {body.length.toLocaleString("en-US")} of{" "}
               {MAX_BODY.toLocaleString("en-US")} characters.
             </p>
@@ -330,11 +328,11 @@ export default function AccommodationRequest({
 
           {problem && <ErrorBox>{problem}</ErrorBox>}
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
             <button type="button" onClick={send} aria-disabled={busy} className={primaryBtn}>
               {stage === "sending" ? "Sending…" : "Send email"}
             </button>
-            <button ref={newDraftBtnRef} type="button" onClick={askNewDraft} aria-disabled={busy} className={outlineBtn}>
+            <button ref={newDraftBtnRef} type="button" onClick={askNewDraft} aria-disabled={busy} className="btn btn-quiet">
               Write a new draft
             </button>
           </div>

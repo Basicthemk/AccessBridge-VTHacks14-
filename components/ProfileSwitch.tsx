@@ -4,13 +4,8 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PROFILES, type DisabilityProfile } from "@/lib/profiles";
 
-const outlineBtn =
-  "rounded-md border-2 border-accent px-4 py-3 font-bold text-accent hover:bg-accent hover:text-surface aria-disabled:opacity-60";
-// A lone action sits at the small size; a button beside a primary one matches it (px-4 py-3).
-const smallBtn =
-  "rounded-md border-2 border-accent px-3 py-2 font-bold text-accent hover:bg-accent hover:text-surface";
-const primaryBtn =
-  "rounded-md bg-primary-dark px-4 py-3 font-bold text-surface transition-colors hover:bg-ink aria-disabled:opacity-60";
+const outlineBtn = "btn btn-outline";
+const primaryBtn = "btn btn-primary";
 
 export default function ProfileSwitch({ current }: { current: DisabilityProfile | null }) {
   const router = useRouter();
@@ -71,13 +66,13 @@ export default function ProfileSwitch({ current }: { current: DisabilityProfile 
       <p role="status" className="sr-only">{announce}</p>
 
       {!open && (
-        <button ref={openBtn} type="button" onClick={show} className={`${smallBtn} mt-3`}>
+        <button ref={openBtn} type="button" onClick={show} className="btn btn-quiet -ml-3 mt-2">
           Change study profile
         </button>
       )}
 
       {open && (
-        <fieldset className="mt-3 rounded-md border-2 border-accent bg-surface p-3">
+        <fieldset className="mt-3 rounded-lg border border-border bg-surface p-3">
           {/* Floated so a legend that wraps on a narrow screen sits inside the box instead of straddling its top border. */}
           <legend className="float-left w-full font-bold">Study profile (now: {label})</legend>
           <p className="clear-both pt-2">
@@ -91,7 +86,7 @@ export default function ProfileSwitch({ current }: { current: DisabilityProfile 
                 <label
                   key={p.value}
                   className={`flex cursor-pointer gap-3 rounded-md border-2 p-3 transition-colors focus-within:outline focus-within:outline-[3px] focus-within:outline-offset-2 focus-within:outline-accent ${
-                    selected ? "border-accent bg-background ring-2 ring-accent" : "border-accent bg-surface"
+                    selected ? "border-accent bg-background" : "border-border bg-surface hover:border-accent"
                   }`}
                 >
                   <input
@@ -105,14 +100,14 @@ export default function ProfileSwitch({ current }: { current: DisabilityProfile 
                   />
                   <span>
                     <span className="block font-bold">{p.label}</span>
-                    <span className="block">{p.blurb}</span>
+                    <span className="mt-1 block text-sm">{p.blurb}</span>
                   </span>
                 </label>
               );
             })}
           </div>
           {problem && (
-            <p role="alert" className="mt-3 rounded-md border-2 border-error bg-surface px-3 py-2 font-bold text-error">
+            <p role="alert" className="callout-error mt-3">
               Problem: {problem}
             </p>
           )}

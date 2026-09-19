@@ -29,71 +29,69 @@ export default async function Dashboard() {
   return (
     <>
       <AppHeader />
-      <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-3 pb-6 pt-5 md:px-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-4xl font-semibold">Your lectures</h1>
-          <p className="mt-2">
-            Signed in as <strong>{user?.email}</strong>. Study profile:{" "}
-            <strong>{profile?.label ?? "Not set"}</strong>.
-          </p>
-          <ProfileSwitch current={profileValue} />
-        </div>
-        <Link
-          href="/upload"
-          className="rounded-md bg-primary-dark px-4 py-3 font-bold text-surface transition-colors hover:bg-ink"
-        >
-          Upload a lecture
-        </Link>
-      </div>
-
-      {error && (
-        <p role="alert" className="mt-5 rounded-md border-2 border-error bg-surface px-3 py-2 font-bold text-error">
-          Problem: We couldn’t load your lectures. Refresh the page to try again.
-        </p>
-      )}
-
-      {!error && lectures?.length === 0 && (
-        <section className="mt-5 rounded-lg border-2 border-dashed border-accent p-5">
-          <h2 className="text-2xl font-semibold">No lectures yet</h2>
-          <p className="mt-2 max-w-prose">
-            Upload your first recording to start building your library.
-          </p>
-          <Link
-            href="/upload"
-            className="mt-3 inline-block rounded-md border-2 border-accent px-4 py-3 font-bold text-accent hover:bg-accent hover:text-surface"
-          >
+      <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-3 pb-7 pt-6 md:px-5">
+      <div className="split gap-y-5">
+        <div className="split-side">
+          <h1 className="text-4xl font-semibold text-balance">Your lectures</h1>
+          <Link href="/upload" className="btn btn-primary mt-4">
             Upload a lecture
           </Link>
-        </section>
-      )}
+          <div className="mt-5 border-t border-border pt-4">
+            <p>
+              Signed in as <strong>{user?.email}</strong>. Study profile:{" "}
+              <strong>{profile?.label ?? "Not set"}</strong>.
+            </p>
+            <ProfileSwitch current={profileValue} />
+          </div>
+        </div>
 
-      {lectures && lectures.length > 0 && (
-        <ul className="mt-5 space-y-3">
-          {lectures.map((l) => (
-            <li
-              key={l.id}
-              className="flex flex-wrap items-start justify-between gap-3 rounded-md border border-border bg-surface p-4"
-            >
-              <div className="min-w-0">
-                <h2 className="text-xl font-semibold">
-                  <Link href={`/lectures/${l.id}`} className="text-accent underline underline-offset-4 hover:text-primary-dark">
-                    {l.title}
-                  </Link>
-                </h2>
-                <p className="text-sm">
-                  Uploaded{" "}
-                  {new Date(l.created_at).toLocaleDateString("en-US", {
-                    dateStyle: "medium",
-                    timeZone: "UTC",
-                  })}
-                </p>
-              </div>
-              <TranscriptStatus lectureId={l.id} state={transcriptState(l)} title={l.title} />
-            </li>
-          ))}
-        </ul>
-      )}
+        <div className="split-main">
+          {error && (
+            <p role="alert" className="callout-error">
+              Problem: We couldn’t load your lectures. Refresh the page to try again.
+            </p>
+          )}
+
+          {!error && lectures?.length === 0 && (
+            <section className="rounded-lg border-2 border-dashed border-accent p-5">
+              <h2 className="text-2xl font-semibold">No lectures yet</h2>
+              <p className="mt-2 max-w-prose">
+                Upload your first recording to start building your library.
+              </p>
+              <Link href="/upload" className="btn btn-outline mt-4">
+                Upload a lecture
+              </Link>
+            </section>
+          )}
+
+          {lectures && lectures.length > 0 && (
+            <ul className="border-b border-border">
+              {lectures.map((l) => (
+                <li
+                  key={l.id}
+                  className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 border-t border-border py-4"
+                >
+                  <div className="min-w-0">
+                    <h2 className="text-xl font-semibold">
+                      <Link href={`/lectures/${l.id}`} className="text-accent underline underline-offset-4 hover:text-primary-dark">
+                        {l.title}
+                      </Link>
+                    </h2>
+                    <p className="mt-1 text-sm">
+                      Uploaded{" "}
+                      {new Date(l.created_at).toLocaleDateString("en-US", {
+                        dateStyle: "medium",
+                        timeZone: "UTC",
+                      })}
+                    </p>
+                  </div>
+                  <TranscriptStatus lectureId={l.id} state={transcriptState(l)} title={l.title} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
     </main>
     </>
   );

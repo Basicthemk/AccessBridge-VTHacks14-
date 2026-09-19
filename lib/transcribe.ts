@@ -1,11 +1,13 @@
 import { GoogleGenAI, createPartFromUri, createUserContent, FileState } from "@google/genai";
 import { generateWithFallback } from "./gemini";
+import { keepTrustedTimestamps, stripTimestamps } from "./transcript-time";
 
 const NO_SPEECH = "[NO_SPEECH]";
 
 const PROMPT = `Transcribe this lecture recording word for word.
 - Write plain text in paragraphs, breaking at natural pauses or topic changes.
-- Do not summarise, explain, translate, or add timestamps or headings.
+- Begin every paragraph with the time it starts in the recording, in square brackets: [m:ss], or [h:mm:ss] once past an hour. For example [0:00] then [0:48] then [12:05]. Times must only move forward.
+- Do not summarise, explain, translate, or add headings.
 - Mark unclear words as [inaudible].
 - If the recording contains no speech, reply with exactly ${NO_SPEECH}.`;
 
@@ -61,12 +63,14 @@ export async function transcribeFromUrl(signedUrl: string, mimeType: string): Pr
     });
 
     const text = (response.text ?? "").trim();
+    // The times are checked below; "no speech" is judged on the words alone.
+    const words = stripTimestamps(text);
     const finish = response.candidates?.[0]?.finishReason;
     if (finish === "MAX_TOKENS")
       throw new TranscribeError("This recording is too long to transcribe in one go. Upload a shorter section.", "MAX_TOKENS");
-    if (!text || text === NO_SPEECH)
+    if (!words || words === NO_SPEECH)
       throw new TranscribeError("We didn’t hear any speech in this recording. Check that it plays with sound, then try again.", `finish ${finish}`);
-    return text;
+    return keepTrustedTimestamps(text);
   } catch (err) {
     throw explain(err);
   } finally {

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { STALE_AFTER_MS, transcriptState } from "@/lib/transcript-status";
 import { GenerateError, generateStudyMaterial } from "@/lib/generate-study-material";
 import { removeAudioFiles } from "@/lib/read-aloud-cleanup";
+import { stripTimestamps } from "@/lib/transcript-time";
 import type { DisabilityProfile } from "@/lib/profiles";
 
 // Same ceiling as the transcription route. The model calls stop starting new
@@ -41,7 +42,8 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   }
 
   const profile = profileRow.disability_profile as DisabilityProfile;
-  const transcript = lecture.transcript;
+  // The study material is made from the words alone; the times stay in the transcript.
+  const transcript = stripTimestamps(lecture.transcript);
   const lectureId = lecture.id;
   const now = new Date().toISOString();
 

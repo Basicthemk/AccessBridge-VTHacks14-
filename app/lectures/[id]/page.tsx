@@ -9,6 +9,7 @@ import StudyMaterialView from "@/components/StudyMaterial";
 import AccommodationRequest from "@/components/AccommodationRequest";
 import { senderVerified } from "@/lib/send-email";
 import { transcriptState } from "@/lib/transcript-status";
+import { formatTime, parseTranscript } from "@/lib/transcript-time";
 import { generationState, type GeneratedContentRow } from "@/lib/generation-status";
 import { InvalidMaterialError, parseStudyMaterial, type StudyMaterial } from "@/lib/study-material";
 
@@ -92,9 +93,7 @@ export default async function LecturePage({ params }: { params: { id: string } }
     }
   }
 
-  const paragraphs: string[] = transcriptReady
-    ? lecture.transcript!.split(/\n\s*\n/).map((p: string) => p.trim()).filter(Boolean)
-    : [];
+  const paragraphs = transcriptReady ? parseTranscript(lecture.transcript!) : [];
 
   return (
     <>
@@ -164,7 +163,15 @@ export default async function LecturePage({ params }: { params: { id: string } }
             <h2 id="transcript" className="text-3xl font-semibold">Full transcript</h2>
             <div className={`reading flow mt-4 ${profileType === "dyslexia" ? "reading-relaxed" : ""}`}>
               {paragraphs.map((p, i) => (
-                <p key={i}>{p}</p>
+                <p key={i}>
+                  {p.seconds !== null && (
+                    <time dateTime={`PT${p.seconds}S`} className="mb-1 block font-bold tabular-nums text-accent">
+                      <span className="sr-only">Starts at </span>
+                      {formatTime(p.seconds)}
+                    </time>
+                  )}
+                  {p.text}
+                </p>
               ))}
             </div>
           </section>

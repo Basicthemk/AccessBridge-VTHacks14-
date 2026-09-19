@@ -22,14 +22,6 @@ export default function AuthShell({ children }: { children: React.ReactNode }) {
       <div className="md:col-span-7 md:col-start-1 md:row-start-2 md:self-start">
         <figure className="max-w-prose border-t border-border pt-4">
           <figcaption className="font-heading text-xl font-semibold">What the dense version becomes</figcaption>
-          <p className="mt-3">
-            <span className="sr-only">Before: </span>
-            <del className="line-through decoration-error decoration-2">
-              Heteroscedasticity, wherein the variance of residuals is non-constant across
-              levels of the predictor, violates the homoscedasticity assumption of ordinary
-              least squares.
-            </del>
-          </p>
           <ul aria-label="Plain-language version" className="mt-3 list-disc space-y-2 pl-4">
             <li>Residuals are the gaps between predictions and reality.</li>
             <li>Heteroscedasticity: those gaps change size as the predictor grows.</li>

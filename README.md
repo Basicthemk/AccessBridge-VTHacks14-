@@ -85,10 +85,15 @@ This project uses five external services. Each needs its own API key.
 Edit .env.local
 
 SUPABASE_URL=your-project-url
+
 SUPABASE_ANON_KEY=your-anon-key
+
 GEMINI_API_KEY=your-gemini-key
+
 ELEVENLABS_API_KEY=your-elevenlabs-key
+
 RESEND_API_KEY=your-resend-key
+
 EMAIL_FROM=requests@yourdomain.com
 
 
@@ -108,10 +113,15 @@ EMAIL_FROM=requests@yourdomain.com
 ### AI Processing Pipeline
 
 Lecture Audio → Gemini Transcription → Profile-Specific Study Material
+
 ↓
+
 Accommodation Email Draft (grounded in transcript)
+
 ↓
+
 Student Review/Edit → Resend → Professor Inbox
+
 
 
 ## Deployment

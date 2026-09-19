@@ -1,7 +1,8 @@
 import type { ContentListUnion, GenerateContentConfig, GenerateContentResponse, GoogleGenAI } from "@google/genai";
 
-// Newer models are often overloaded (503), so try the preferred one first, then older ones.
-export const MODELS = [process.env.GEMINI_MODEL || "gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash"];
+// Newer models are often overloaded (503), so try the preferred one first, then older ones. Each
+// model has its own daily quota, so the Lite model at the end keeps working after the others run out.
+export const MODELS = [process.env.GEMINI_MODEL || "gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
 const TRANSIENT = new Set([429, 500, 503, 504]);
 const RETRY_DELAY_MS = 5000;
 const MIN_ATTEMPT_MS = 20_000;

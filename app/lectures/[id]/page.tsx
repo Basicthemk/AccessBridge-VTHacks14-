@@ -8,6 +8,7 @@ import GenerationStatus from "@/components/GenerationStatus";
 import StudyMaterialView from "@/components/StudyMaterial";
 import AccommodationRequest from "@/components/AccommodationRequest";
 import FollowUpReminder from "@/components/FollowUpReminder";
+import SectionNav from "@/components/SectionNav";
 import { senderVerified } from "@/lib/send-email";
 import { transcriptState } from "@/lib/transcript-status";
 import { formatTime, parseTranscript } from "@/lib/transcript-time";
@@ -113,28 +114,18 @@ export default async function LecturePage({ params }: { params: { id: string } }
           profile: <strong>{profile?.label ?? "Not set"}</strong>.
         </p>
 
-        <nav aria-label="On this page" className="mt-4">
-          <ul className="flex flex-wrap gap-2">
-            {[
-              { id: "progress", label: "Progress", show: true },
-              { id: "study", label: "Study material", show: transcriptReady },
-              { id: "accommodations", label: "Ask for accommodations", show: !!(profile && user?.email) },
-              { id: "transcript", label: "Full transcript", show: transcriptReady },
-            ]
-              .filter((s) => s.show)
-              .map((s) => (
-                <li key={s.id}>
-                  <a href={`#${s.id}`} className="btn btn-sm btn-outline">
-                    {s.label}
-                  </a>
-                </li>
-              ))}
-          </ul>
-        </nav>
+        <SectionNav
+          items={[
+            { id: "progress", label: "Progress", show: true },
+            { id: "study", label: "Study material", show: transcriptReady },
+            { id: "accommodations", label: "Ask for accommodations", show: !!(profile && user?.email) },
+            { id: "transcript", label: "Full transcript", show: transcriptReady },
+          ].filter((i) => i.show)}
+        />
 
         {/* The status controls stay in the page once the work finishes, so the change to "ready" is announced. */}
-        <section aria-labelledby="progress" className="band split">
-          <h2 id="progress" className="split-side text-2xl font-semibold">Progress</h2>
+        <section id="progress" aria-labelledby="progress-heading" tabIndex={-1} className="band split concept-target">
+          <h2 id="progress-heading" className="split-side text-2xl font-semibold">Progress</h2>
           <div className="split-main space-y-3">
             <TranscriptStatus lectureId={lecture.id} state={tState} />
             {transcriptReady && profile && !loadFailed && (
@@ -144,8 +135,8 @@ export default async function LecturePage({ params }: { params: { id: string } }
         </section>
 
         {transcriptReady && (
-          <section aria-labelledby="study" className="band split">
-            <h2 id="study" className="split-side text-2xl font-semibold md:sticky md:top-4 md:self-start">Study material</h2>
+          <section id="study" aria-labelledby="study-heading" tabIndex={-1} className="band split concept-target">
+            <h2 id="study-heading" className="split-side text-2xl font-semibold md:sticky md:top-4 md:self-start">Study material</h2>
 
             <div className="split-main">
               {!profile && (
@@ -170,8 +161,8 @@ export default async function LecturePage({ params }: { params: { id: string } }
         )}
 
         {profile && user?.email && (
-          <section aria-labelledby="accommodations" className="band split">
-            <h2 id="accommodations" className="split-side text-2xl font-semibold md:sticky md:top-4 md:self-start">Ask for accommodations</h2>
+          <section id="accommodations" aria-labelledby="accommodations-heading" tabIndex={-1} className="band split concept-target">
+            <h2 id="accommodations-heading" className="split-side text-2xl font-semibold md:sticky md:top-4 md:self-start">Ask for accommodations</h2>
             <div className="split-main">
               <AccommodationRequest lectureId={lecture.id} profileLabel={profile.label} studentEmail={user.email} resumable={resumable} senderReady={senderVerified()} />
               <div className="band">
@@ -185,8 +176,8 @@ export default async function LecturePage({ params }: { params: { id: string } }
         )}
 
         {transcriptReady && (
-          <section aria-labelledby="transcript" className="band split">
-            <h2 id="transcript" className="split-side text-2xl font-semibold md:sticky md:top-4 md:self-start">Full transcript</h2>
+          <section id="transcript" aria-labelledby="transcript-heading" tabIndex={-1} className="band split concept-target">
+            <h2 id="transcript-heading" className="split-side text-2xl font-semibold md:sticky md:top-4 md:self-start">Full transcript</h2>
             <div className={`split-main reading flow ${profileType === "dyslexia" ? "reading-relaxed" : ""}`}>
               {paragraphs.map((p, i) => (
                 <p key={i}>

@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { BadOutputError, DeadlineError, generateWithFallback } from "./gemini";
+import { BadOutputError, DeadlineError, generateWithFallback, isDailyQuota } from "./gemini";
 import type { DisabilityProfile } from "./profiles";
 import {
   CONCEPT_MAP_SCHEMA,
@@ -33,6 +33,8 @@ function explain(err: unknown): GenerateError {
     return new GenerateError("Making the study material took too long and was stopped. Try again.", detail);
   if (err instanceof BadOutputError || err instanceof InvalidMaterialError)
     return new GenerateError("The study material came back in a form we couldn’t use. Try again.", detail);
+  if (isDailyQuota(err))
+    return new GenerateError("The study-material service has reached its daily limit. Try again tomorrow.", detail);
   if (status === 429)
     return new GenerateError("The study-material service is busy or over its quota. Wait a minute, then try again.", detail);
   if (status === 401 || status === 403)

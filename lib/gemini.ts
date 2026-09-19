@@ -6,6 +6,16 @@ const TRANSIENT = new Set([429, 500, 503, 504]);
 const RETRY_DELAY_MS = 5000;
 const MIN_ATTEMPT_MS = 20_000;
 
+/**
+ * A 429 that means the model's quota for the day is used up, not a brief spike. Retrying it
+ * only spends more of the quota, so the caller moves on to the next model straight away.
+ */
+export function isDailyQuota(err: unknown): boolean {
+  if ((err as { status?: number })?.status !== 429) return false;
+  const message = err instanceof Error ? err.message : "";
+  return /exceeded your current quota/i.test(message) && !/PerMinute/i.test(message);
+}
+
 /** Thrown by a `parse` callback when the model's answer is unusable; the call is retried, then the next model is tried. */
 export class BadOutputError extends Error {}
 
@@ -55,6 +65,10 @@ export async function generateWithFallback<T>(
         }
         const status = (err as { status?: number })?.status;
         if (status === 404) break; // model retired for this key: go to the next one
+        if (isDailyQuota(err)) {
+          console.warn(`${tag}: daily quota used up on`, model);
+          break;
+        }
         if (!status || !TRANSIENT.has(status)) throw err;
         console.warn(`${tag}: transient`, status, "from", model);
         if (attempt === 0) await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));

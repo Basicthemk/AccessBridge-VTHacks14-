@@ -6,6 +6,9 @@ import { PROFILES, type DisabilityProfile } from "@/lib/profiles";
 
 const outlineBtn =
   "rounded-md border-2 border-accent px-4 py-3 font-bold text-accent hover:bg-accent hover:text-surface aria-disabled:opacity-60";
+// A lone action sits at the small size; a button beside a primary one matches it (px-4 py-3).
+const smallBtn =
+  "rounded-md border-2 border-accent px-3 py-2 font-bold text-accent hover:bg-accent hover:text-surface";
 const primaryBtn =
   "rounded-md bg-primary-dark px-4 py-3 font-bold text-surface transition-colors hover:bg-ink aria-disabled:opacity-60";
 
@@ -68,15 +71,16 @@ export default function ProfileSwitch({ current }: { current: DisabilityProfile 
       <p role="status" className="sr-only">{announce}</p>
 
       {!open && (
-        <button ref={openBtn} type="button" onClick={show} className={`${outlineBtn} mt-3`}>
+        <button ref={openBtn} type="button" onClick={show} className={`${smallBtn} mt-3`}>
           Change study profile
         </button>
       )}
 
       {open && (
         <fieldset className="mt-3 rounded-md border-2 border-accent bg-surface p-3">
-          <legend className="px-1 font-bold">Study profile (now: {label})</legend>
-          <p>
+          {/* Floated so a legend that wraps on a narrow screen sits inside the box instead of straddling its top border. */}
+          <legend className="float-left w-full font-bold">Study profile (now: {label})</legend>
+          <p className="clear-both pt-2">
             New study material will follow the profile you choose. Material you already made keeps its old shape until you
             press “Make study material again” on that lecture.
           </p>

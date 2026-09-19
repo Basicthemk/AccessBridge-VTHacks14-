@@ -1,4 +1,5 @@
 import ReadAloud from "@/components/ReadAloud";
+import ConceptMapView from "@/components/ConceptMap";
 import type { DeafHohMaterial, DyslexiaMaterial, StudyMaterial } from "@/lib/study-material";
 
 // Section headings inside the material. Structure comes from real headings and
@@ -69,6 +70,8 @@ function Dyslexia({ m, lectureId }: { m: DyslexiaMaterial; lectureId: string }) 
 function DeafHoh({ m }: { m: DeafHohMaterial }) {
   return (
     <div className="reading flow-lg">
+      <ConceptMapView map={m.concept_map} />
+
       <section aria-labelledby="captions">
         <h3 id="captions" className={h3}>Captioned transcript</h3>
         <div className="flow-lg mt-3">

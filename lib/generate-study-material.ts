@@ -2,9 +2,11 @@ import { GoogleGenAI } from "@google/genai";
 import { BadOutputError, DeadlineError, generateWithFallback } from "./gemini";
 import type { DisabilityProfile } from "./profiles";
 import {
+  CONCEPT_MAP_SCHEMA,
   DEAF_HOH_SCHEMA,
   DYSLEXIA_SCHEMA,
   InvalidMaterialError,
+  parseConceptMapOutput,
   parseDeafHohOutput,
   parseDyslexiaOutput,
   parseStudyMaterial,
@@ -62,6 +64,11 @@ The transcript is split into numbered paragraphs like [P12]. Produce:
 - sections: split the lecture into topic sections, about one per 600 words (at least 1, at most 25). Give each a short heading and the number of its first paragraph. Start the first section at paragraph 1. Sections must be in increasing paragraph order.
 - glossary: technical terms the lecturer used, each with a plain one- or two-sentence definition drawn from the lecture. Use an empty list if there are none.
 - emphasised: points the lecturer clearly stressed in words, for example by saying it is important, will be tested, is a common mistake, or by repeating it. Say in "cue" how the transcript shows this. Only include points where the transcript shows it; use an empty list if none.`;
+
+const CONCEPT_MAP_INSTRUCTION = `You map the ideas in a lecture transcript for a student who is deaf or hard of hearing and will read the map as text, without seeing a diagram.
+${SOURCE_RULES}
+Produce concepts: 3 to 25 of the lecture's main ideas, in the order a reader should meet them (foundations first). Give each a theme name; concepts that belong together share the exact same theme wording and sit next to each other. Give each concept a unique slug id, a name, and a one- or two-sentence explanation drawn from the lecture.
+Then list at most 5 relations from each concept to other concepts. A relation is a short active verb phrase plus the id of the target, and must read as a true sentence from the lecture, such as "Photosynthesis" + "produces" + "glucose". Only state relations the transcript states or clearly implies. Do not relate a concept to itself, and do not use a relation twice between the same pair. Every concept should connect to at least one other, either by its own relations or by being the target of another's.`;
 
 // ---------- transcript preparation (deaf/HoH) ----------
 
@@ -161,19 +168,36 @@ export async function generateStudyMaterial(
     const paragraphs = toParagraphs(transcript);
     if (paragraphs.length === 0) throw new GenerateError("The transcript is empty, so there is nothing to build from.");
     const numbered = paragraphs.map((p, i) => `[P${i + 1}] ${p}`).join("\n\n");
-    const output = await generateWithFallback(ai, {
-      contents: numbered,
-      config: {
-        systemInstruction: DEAF_HOH_INSTRUCTION,
-        temperature: 0.2,
-        maxOutputTokens: 16384,
-        responseMimeType: "application/json",
-        responseJsonSchema: DEAF_HOH_SCHEMA,
-      },
-      parse: parsing((v) => parseDeafHohOutput(v, paragraphs.length)),
-      deadline,
-      log: "generate",
-    });
+    // Two separate calls, run together: one schema holding both the captions' structure and the
+    // concept map is too big for Gemini to accept (see CONCEPT_MAP_SCHEMA).
+    const [output, conceptMap] = await Promise.all([
+      generateWithFallback(ai, {
+        contents: numbered,
+        config: {
+          systemInstruction: DEAF_HOH_INSTRUCTION,
+          temperature: 0.2,
+          maxOutputTokens: 16384,
+          responseMimeType: "application/json",
+          responseJsonSchema: DEAF_HOH_SCHEMA,
+        },
+        parse: parsing((v) => parseDeafHohOutput(v, paragraphs.length)),
+        deadline,
+        log: "generate",
+      }),
+      generateWithFallback(ai, {
+        contents: paragraphs.join("\n\n"),
+        config: {
+          systemInstruction: CONCEPT_MAP_INSTRUCTION,
+          temperature: 0.2,
+          maxOutputTokens: 16384,
+          responseMimeType: "application/json",
+          responseJsonSchema: CONCEPT_MAP_SCHEMA,
+        },
+        parse: parsing(parseConceptMapOutput),
+        deadline,
+        log: "concept-map",
+      }),
+    ]);
 
     // The model only decides where sections start; the caption text comes straight from the transcript,
     // so a long lecture doesn't have to be re-typed by the model and nothing can be reworded.
@@ -182,7 +206,7 @@ export async function generateStudyMaterial(
       const to = i + 1 < output.sections.length ? output.sections[i + 1].start_paragraph - 1 : paragraphs.length;
       return { heading: s.heading, paragraphs: paragraphs.slice(from - 1, to).map(toCaptionLines) };
     });
-    return parseStudyMaterial(profile, { version: 1, profile, sections, glossary: output.glossary, emphasised: output.emphasised });
+    return parseStudyMaterial(profile, { version: 1, profile, sections, glossary: output.glossary, emphasised: output.emphasised, concept_map: conceptMap });
   } catch (err) {
     throw explain(err);
   }

@@ -14,6 +14,6 @@ export const PROFILES: {
   {
     value: "deaf_hoh",
     label: "Deaf or hard of hearing",
-    blurb: "Timestamped captions and a concept map of the lecture.",
+    blurb: "Captions of the whole lecture and a written concept map of how its ideas connect.",
   },
 ];

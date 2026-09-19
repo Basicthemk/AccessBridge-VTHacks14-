@@ -2,7 +2,8 @@ export default function AuthShell({ children }: { children: React.ReactNode }) {
   return (
     <main id="main" tabIndex={-1} className="mx-auto grid min-h-screen max-w-6xl gap-6 px-3 py-5 md:grid-cols-2 md:items-center md:gap-7 md:px-5">
       <section aria-labelledby="pitch" className="max-w-prose">
-        <p className="font-heading text-2xl font-semibold text-primary-dark">AccessBridge</p>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/lockup-transparent.svg" alt="AccessBridge" width={1040} height={220} className="h-7 w-auto max-w-full" />
         <h1 id="pitch" className="mt-4 text-4xl font-semibold text-balance md:text-5xl">
           The lecture, made readable. The paperwork, handled.
         </h1>

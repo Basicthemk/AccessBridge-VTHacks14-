@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { SpeechError, TTS_FORMAT, TTS_MODEL, TTS_VOICE, synthesize } from "@/lib/elevenlabs";
-import { MAX_CHARS_PER_DAY, MAX_CHARS_PER_MONTH, MAX_REQUEST_BYTES, MAX_SECTION_CHARS, isSection, sectionText } from "@/lib/read-aloud";
+import { MAX_CHARS_ALL_STUDENTS_PER_MONTH, MAX_CHARS_PER_DAY, MAX_CHARS_PER_MONTH, MAX_REQUEST_BYTES, MAX_SECTION_CHARS, isSection, sectionText } from "@/lib/read-aloud";
 import { removeAudioFiles } from "@/lib/read-aloud-cleanup";
 import { InvalidMaterialError, parseStudyMaterial } from "@/lib/study-material";
 
@@ -120,6 +120,20 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   }
   if (usedMonth + text.length > MAX_CHARS_PER_MONTH) {
     return fail("You’ve reached this month’s read-aloud limit. Audio you’ve already made still plays.", 429);
+  }
+
+  // Shared cap across all students. The function comes from supabase/readaloud-global-cap.sql;
+  // until that has been run, only the per-student limits apply and this is logged loudly.
+  const { data: allUsed, error: allError } = await supabase.rpc("read_aloud_characters_last_30_days");
+  if (allError) {
+    if (allError.code === "PGRST202" || allError.code === "42883") {
+      console.error("read aloud: shared cap NOT enforced, run supabase/readaloud-global-cap.sql", allError.message);
+    } else {
+      console.error("read aloud: shared cap check failed", allError.message);
+      return fail("We couldn’t check the audio limit. Try again.", 500);
+    }
+  } else if (Number(allUsed) + text.length > MAX_CHARS_ALL_STUDENTS_PER_MONTH) {
+    return fail("Read aloud has reached its limit for this month across all students. Audio you’ve already made still plays. It opens up again as older audio ages out.", 429);
   }
 
   let audio: Buffer;

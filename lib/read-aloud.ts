@@ -18,6 +18,11 @@ export const MAX_REQUEST_BYTES = 256;
  */
 export const MAX_CHARS_PER_DAY = 3_000;
 export const MAX_CHARS_PER_MONTH = 5_000;
+/**
+ * Shared cap across every student per rolling 30 days. It sits under the plan's 20,000 so the
+ * owner has room for checks, and one student's audio still counts once the files are deleted.
+ */
+export const MAX_CHARS_ALL_STUDENTS_PER_MONTH = 18_000;
 export const MAX_SECTION_CHARS = MAX_CHARS_PER_DAY;
 
 // A full stop after each heading and a blank line between blocks give the voice a natural pause.

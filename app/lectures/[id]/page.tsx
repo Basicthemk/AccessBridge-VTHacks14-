@@ -113,6 +113,25 @@ export default async function LecturePage({ params }: { params: { id: string } }
           profile: <strong>{profile?.label ?? "Not set"}</strong>.
         </p>
 
+        <nav aria-label="On this page" className="mt-4">
+          <ul className="flex flex-wrap gap-2">
+            {[
+              { id: "progress", label: "Progress", show: true },
+              { id: "study", label: "Study material", show: transcriptReady },
+              { id: "accommodations", label: "Ask for accommodations", show: !!(profile && user?.email) },
+              { id: "transcript", label: "Full transcript", show: transcriptReady },
+            ]
+              .filter((s) => s.show)
+              .map((s) => (
+                <li key={s.id}>
+                  <a href={`#${s.id}`} className="btn btn-sm btn-outline">
+                    {s.label}
+                  </a>
+                </li>
+              ))}
+          </ul>
+        </nav>
+
         {/* The status controls stay in the page once the work finishes, so the change to "ready" is announced. */}
         <section aria-labelledby="progress" className="band split">
           <h2 id="progress" className="split-side text-2xl font-semibold">Progress</h2>

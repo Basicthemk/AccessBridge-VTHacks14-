@@ -8,8 +8,7 @@ type Phase = "idle" | "loading" | "playing" | "paused" | "finished" | "failed";
 // Only one section speaks at a time: a starting player tells the others to pause.
 const PLAY_EVENT = "ab-readaloud-play";
 
-const btn =
-  "inline-flex items-center gap-2 rounded-md border-2 border-accent px-3 py-2 font-bold text-accent hover:bg-accent hover:text-surface aria-disabled:opacity-60";
+const btn = "btn btn-sm btn-outline";
 
 const icon = { "aria-hidden": true, width: 16, height: 16, viewBox: "0 0 16 16", fill: "none", stroke: "currentColor", strokeWidth: 2.5 } as const;
 
@@ -149,7 +148,7 @@ export default function ReadAloud({
         )}
 
         {phase !== "failed" && phase !== "idle" && (
-          <span className="rounded-sm border-2 border-accent px-2 py-1 font-bold text-accent">
+          <span className="chip border-accent text-accent">
             {STATE_TEXT[phase]}
           </span>
         )}
@@ -158,7 +157,7 @@ export default function ReadAloud({
       {problem && (
         <p
           role="alert"
-          className="mt-2 inline-flex max-w-prose items-start gap-2 rounded-md border-2 border-error bg-surface px-3 py-2 font-bold text-error"
+          className="callout-error mt-2 inline-flex max-w-prose items-start gap-2"
         >
           <svg {...icon} className="mt-1 shrink-0"><path d="M8 2l6.5 12h-13z M8 6.5v3.5 M8 12v.5" /></svg>
           <span>Problem: {problem}</span>

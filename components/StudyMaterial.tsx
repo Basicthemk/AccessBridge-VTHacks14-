@@ -4,7 +4,7 @@ import type { DeafHohMaterial, DyslexiaMaterial, StudyMaterial } from "@/lib/stu
 
 // Section headings inside the material. Structure comes from real headings and
 // lists so screen readers and the browser's outline both work.
-const h3 = "text-2xl font-semibold";
+const h3 = "text-xl font-semibold";
 
 function Terms({ items }: { items: { term: string; definition: string }[] }) {
   return (
@@ -28,7 +28,7 @@ function Dyslexia({ m, lectureId }: { m: DyslexiaMaterial; lectureId: string }) 
         <div className="flow-lg mt-3">
           {m.summary_chunks.map((c, i) => (
             <section key={i} className="border-l-4 border-accent pl-3">
-              <h4 className="text-xl font-semibold">{c.heading}</h4>
+              <h4 className="text-lg font-semibold">{c.heading}</h4>
               <p className="mt-1">{c.text}</p>
             </section>
           ))}
@@ -77,7 +77,7 @@ function DeafHoh({ m }: { m: DeafHohMaterial }) {
         <div className="flow-lg mt-3">
           {m.sections.map((s, i) => (
             <section key={i} aria-labelledby={`sec-${i}`}>
-              <h4 id={`sec-${i}`} className="text-xl font-semibold">{s.heading}</h4>
+              <h4 id={`sec-${i}`} className="text-lg font-semibold">{s.heading}</h4>
               <div className="flow mt-2">
                 {s.paragraphs.map((lines, j) => (
                   <p key={j}>

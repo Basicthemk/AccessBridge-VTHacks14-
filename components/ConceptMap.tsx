@@ -6,7 +6,7 @@ import { relationSentence, type Concept, type ConceptMap } from "@/lib/study-mat
 // meet the ideas, so screen reader and keyboard order follow the meaning. The target of each
 // sentence is a link that jumps to that idea's entry.
 
-const h3 = "text-2xl font-semibold";
+const h3 = "text-xl font-semibold";
 
 export default function ConceptMapView({ map, unavailable }: { map: ConceptMap | undefined; unavailable?: boolean }) {
   return (
@@ -42,7 +42,7 @@ function Body({ map }: { map: ConceptMap }) {
       <div className="flow-lg mt-4">
         {map.themes.map((theme, i) => (
           <section key={i} aria-labelledby={`theme-${i}`}>
-            <h4 id={`theme-${i}`} className="text-xl font-semibold">{theme.name}</h4>
+            <h4 id={`theme-${i}`} className="text-lg font-semibold">{theme.name}</h4>
             <ul className="flow mt-2">
               {theme.concepts.map((c) => (
                 <li key={c.id} id={`concept-${c.id}`} tabIndex={-1} className="concept-target border-l-4 border-accent pl-3">

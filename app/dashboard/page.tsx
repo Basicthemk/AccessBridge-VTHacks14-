@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { PROFILES } from "@/lib/profiles";
+import { PROFILES, type DisabilityProfile } from "@/lib/profiles";
 import AppHeader from "@/components/AppHeader";
+import ProfileSwitch from "@/components/ProfileSwitch";
 import TranscriptStatus from "@/components/TranscriptStatus";
 import { transcriptState } from "@/lib/transcript-status";
 
@@ -13,9 +14,12 @@ export default async function Dashboard() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const profile = PROFILES.find(
-    (p) => p.value === user?.user_metadata?.disability_profile
-  );
+  // The profiles table is the source of truth: it is what the app uses and what can be changed here.
+  const { data: profileRow } = user
+    ? await supabase.from("profiles").select("disability_profile").eq("id", user.id).maybeSingle()
+    : { data: null };
+  const profileValue = (profileRow?.disability_profile ?? null) as DisabilityProfile | null;
+  const profile = PROFILES.find((p) => p.value === profileValue);
 
   const { data: lectures, error } = await supabase
     .from("lectures")
@@ -34,6 +38,7 @@ export default async function Dashboard() {
             Signed in as <strong>{user?.email}</strong>. Study profile:{" "}
             <strong>{profile?.label ?? "Not set"}</strong>.
           </p>
+          <ProfileSwitch current={profileValue} />
         </div>
         <Link
           href="/upload"

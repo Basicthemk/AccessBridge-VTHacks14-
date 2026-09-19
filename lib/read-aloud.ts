@@ -9,8 +9,16 @@ export const isSection = (v: unknown): v is ReadAloudSection =>
 
 /** Whole JSON request to the read-aloud route: just {"section":"summary"}. */
 export const MAX_REQUEST_BYTES = 256;
-/** One section in one request. Flash v2.5 allows 40,000; this keeps a single click affordable. */
-export const MAX_SECTION_CHARS = 20_000;
+/**
+ * Spending limits, sized for the ElevenLabs Free plan: 10,000 credits a month, and Flash v2.5
+ * costs 0.5 credit per character, so about 20,000 characters for the whole app each month.
+ * One student may use a quarter of that per rolling 30 days, and a section longer than the
+ * daily limit could never be read, so it is refused up front with a clear message.
+ * Raise these together when the plan changes.
+ */
+export const MAX_CHARS_PER_DAY = 3_000;
+export const MAX_CHARS_PER_MONTH = 5_000;
+export const MAX_SECTION_CHARS = MAX_CHARS_PER_DAY;
 
 // A full stop after each heading and a blank line between blocks give the voice a natural pause.
 const sentence = (s: string) => (/[.!?…]$/.test(s.trim()) ? s.trim() : `${s.trim()}.`);

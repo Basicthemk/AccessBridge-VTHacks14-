@@ -19,7 +19,7 @@ type Stage = "choose" | "uploading" | "saving" | "done";
 type Picked = { file: File; contentType: string; ext: string };
 
 const primaryBtn =
-  "rounded-md bg-primary px-4 py-3 font-bold text-surface transition-colors hover:bg-primary-dark disabled:opacity-60";
+  "rounded-md bg-primary-dark px-4 py-3 font-bold text-surface transition-colors hover:bg-ink disabled:opacity-60";
 const outlineBtn =
   "rounded-md border-2 border-accent px-4 py-3 font-bold text-accent hover:bg-accent hover:text-surface";
 
@@ -269,7 +269,7 @@ export default function UploadForm() {
           maxLength={MAX_TITLE}
           disabled={busy}
           placeholder="For example, Statistics week 4: regression"
-          className="mt-1 block w-full rounded-md border-2 border-border bg-surface px-3 py-2 text-ink disabled:opacity-60"
+          className="mt-1 block w-full rounded-md border-2 border-accent bg-surface px-3 py-2 text-ink disabled:opacity-60"
         />
       </div>
 

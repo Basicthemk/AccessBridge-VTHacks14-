@@ -7,9 +7,9 @@ import { createClient } from "@/lib/supabase/client";
 import { PROFILES, type DisabilityProfile } from "@/lib/profiles";
 
 const field =
-  "mt-1 block w-full rounded-md border-2 border-border bg-surface px-3 py-2 text-ink";
+  "mt-1 block w-full rounded-md border-2 border-accent bg-surface px-3 py-2 text-ink";
 const primaryBtn =
-  "w-full rounded-md bg-primary px-4 py-3 font-bold text-surface transition-colors hover:bg-primary-dark disabled:opacity-60";
+  "w-full rounded-md bg-primary-dark px-4 py-3 font-bold text-surface transition-colors hover:bg-ink disabled:opacity-60";
 
 export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();

@@ -1,6 +1,6 @@
 export default function AuthShell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="mx-auto grid min-h-screen max-w-6xl gap-6 px-3 py-5 md:grid-cols-2 md:items-center md:gap-7 md:px-5">
+    <main id="main" tabIndex={-1} className="mx-auto grid min-h-screen max-w-6xl gap-6 px-3 py-5 md:grid-cols-2 md:items-center md:gap-7 md:px-5">
       <section aria-labelledby="pitch" className="max-w-prose">
         <p className="font-heading text-2xl font-semibold text-primary">AccessBridge</p>
         <h1 id="pitch" className="mt-4 text-4xl font-semibold text-balance md:text-5xl">

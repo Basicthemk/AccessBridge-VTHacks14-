@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { TranscriptState } from "@/lib/transcript-status";
 
@@ -9,8 +9,19 @@ const POLL_MS = 5000;
 const btn =
   "rounded-md border-2 border-accent px-3 py-2 font-bold text-accent hover:bg-accent hover:text-surface";
 
-export default function TranscriptStatus({ lectureId, state }: { lectureId: string; state: TranscriptState }) {
+// `title` names the lecture in the button labels, so a list of lectures doesn't read as a
+// column of identical "Start transcript" buttons to a screen reader.
+export default function TranscriptStatus({
+  lectureId,
+  state,
+  title,
+}: {
+  lectureId: string;
+  state: TranscriptState;
+  title?: string;
+}) {
   const router = useRouter();
+  const statusRef = useRef<HTMLDivElement>(null);
   const [starting, setStarting] = useState(false);
   const [refreshing, startRefresh] = useTransition();
   const [problem, setProblem] = useState<string | null>(null);
@@ -27,6 +38,8 @@ export default function TranscriptStatus({ lectureId, state }: { lectureId: stri
   async function start() {
     setStarting(true);
     setProblem(null);
+    // The button about to be replaced has focus; hand focus to the status so it isn't lost.
+    statusRef.current?.focus();
     try {
       const res = await fetch(`/api/lectures/${lectureId}/transcribe`, { method: "POST" });
       const type = res.headers.get("content-type") ?? "";
@@ -51,33 +64,38 @@ export default function TranscriptStatus({ lectureId, state }: { lectureId: stri
   }
 
   const working = processing || starting || refreshing;
+  const forLecture = title ? ` for ${title}` : "";
 
   return (
     <div className="max-w-prose">
-      {state.kind === "ready" && (
-        <p role="status" className="inline-flex items-center gap-2 rounded-sm border-2 border-success px-2 py-1 font-bold text-success">
-          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <path d="M3 8.5l3.5 3.5L13 4.5" />
-          </svg>
-          Transcript ready
-        </p>
-      )}
-
-      {working && (
-        <p role="status" className="inline-flex items-center gap-2 rounded-sm border-2 border-accent px-2 py-1 font-bold text-accent">
-          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" className="animate-spin">
-            <path d="M8 2a6 6 0 1 0 6 6" />
-          </svg>
-          Transcribing. This can take a few minutes.
-        </p>
-      )}
-
-      {!working && state.kind === "pending" && (
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="font-bold">Transcript not started</p>
-          <button type="button" onClick={start} className={btn}>Start transcript</button>
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Always in the page, so a change of text is announced. A region inserted with its text is often missed. */}
+        <div ref={statusRef} tabIndex={-1} role="status">
+          {!working && state.kind === "ready" && (
+            <p className="inline-flex items-center gap-2 rounded-sm border-2 border-success px-2 py-1 font-bold text-success">
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M3 8.5l3.5 3.5L13 4.5" />
+              </svg>
+              Transcript ready
+              {title && <span className="sr-only"> for {title}</span>}
+            </p>
+          )}
+          {working && (
+            <p className="inline-flex items-center gap-2 rounded-sm border-2 border-accent px-2 py-1 font-bold text-accent">
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" className="animate-spin">
+                <path d="M8 2a6 6 0 1 0 6 6" />
+              </svg>
+              Transcribing{forLecture}. This can take a few minutes.
+            </p>
+          )}
+          {!working && state.kind === "pending" && <p className="font-bold">Transcript not started</p>}
         </div>
-      )}
+        {!working && state.kind === "pending" && (
+          <button type="button" onClick={start} aria-label={`Start transcript${forLecture}`} className={btn}>
+            Start transcript
+          </button>
+        )}
+      </div>
 
       {!working && state.kind === "failed" && (
         <div role="alert" className="rounded-md border-2 border-error p-2">
@@ -85,10 +103,12 @@ export default function TranscriptStatus({ lectureId, state }: { lectureId: stri
             <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M8 2l6.5 12h-13z M8 6.5v3.5 M8 12v.5" />
             </svg>
-            Transcription failed
+            Transcription failed{forLecture}
           </p>
           <p className="mt-1">{state.message}</p>
-          <button type="button" onClick={start} className={`${btn} mt-2`}>Try again</button>
+          <button type="button" onClick={start} aria-label={`Try again: transcript${forLecture}`} className={`${btn} mt-2`}>
+            Try again
+          </button>
         </div>
       )}
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { GenerationState } from "@/lib/generation-status";
 
@@ -19,6 +19,7 @@ export default function GenerationStatus({
   profileLabel: string;
 }) {
   const router = useRouter();
+  const statusRef = useRef<HTMLDivElement>(null);
   const [starting, setStarting] = useState(false);
   const [refreshing, startRefresh] = useTransition();
   const [problem, setProblem] = useState<string | null>(null);
@@ -35,6 +36,8 @@ export default function GenerationStatus({
   async function start() {
     setStarting(true);
     setProblem(null);
+    // The button about to be replaced has focus; hand focus to the status so it isn't lost.
+    statusRef.current?.focus();
     try {
       const res = await fetch(`/api/lectures/${lectureId}/generate`, { method: "POST" });
       const type = res.headers.get("content-type") ?? "";
@@ -62,22 +65,33 @@ export default function GenerationStatus({
 
   return (
     <div className="max-w-prose">
-      {working && (
-        <p role="status" className="inline-flex items-center gap-2 rounded-sm border-2 border-accent px-2 py-1 font-bold text-accent">
-          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" className="animate-spin">
-            <path d="M8 2a6 6 0 1 0 6 6" />
-          </svg>
-          Making your study material. This can take a minute or two.
-        </p>
-      )}
-
-      {!working && state.kind === "none" && (
-        <div className="space-y-2">
+      {/* Always in the page, so a change of text is announced. A region inserted with its text is often missed. */}
+      <div ref={statusRef} tabIndex={-1} role="status">
+        {working && (
+          <p className="inline-flex items-center gap-2 rounded-sm border-2 border-accent px-2 py-1 font-bold text-accent">
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" className="animate-spin">
+              <path d="M8 2a6 6 0 1 0 6 6" />
+            </svg>
+            Making your study material. This can take a minute or two.
+          </p>
+        )}
+        {!working && state.kind === "ready" && (
+          <p className="inline-flex items-center gap-2 rounded-sm border-2 border-success px-2 py-1 font-bold text-success">
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M3 8.5l3.5 3.5L13 4.5" />
+            </svg>
+            Study material ready
+          </p>
+        )}
+        {!working && state.kind === "none" && (
           <p>
             Your transcript is ready. Make study material for your <strong>{profileLabel}</strong> profile.
           </p>
-          <button type="button" onClick={start} className={btn}>Make study material</button>
-        </div>
+        )}
+      </div>
+
+      {!working && state.kind === "none" && (
+        <button type="button" onClick={start} className={`${btn} mt-2`}>Make study material</button>
       )}
 
       {!working && state.kind === "failed" && (

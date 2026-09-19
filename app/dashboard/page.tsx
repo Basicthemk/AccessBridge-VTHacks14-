@@ -23,8 +23,9 @@ export default async function Dashboard() {
     .order("created_at", { ascending: false });
 
   return (
-    <main className="mx-auto max-w-6xl px-3 py-5 md:px-5">
+    <>
       <AppHeader />
+      <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-3 pb-5 pt-4 md:px-5">
 
       <div className="mt-5 flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -36,7 +37,7 @@ export default async function Dashboard() {
         </div>
         <Link
           href="/upload"
-          className="rounded-md bg-primary px-4 py-3 font-bold text-surface transition-colors hover:bg-primary-dark"
+          className="rounded-md bg-primary-dark px-4 py-3 font-bold text-surface transition-colors hover:bg-ink"
         >
           Upload a lecture
         </Link>
@@ -84,11 +85,12 @@ export default async function Dashboard() {
                   })}
                 </p>
               </div>
-              <TranscriptStatus lectureId={l.id} state={transcriptState(l)} />
+              <TranscriptStatus lectureId={l.id} state={transcriptState(l)} title={l.title} />
             </li>
           ))}
         </ul>
       )}
     </main>
+    </>
   );
 }

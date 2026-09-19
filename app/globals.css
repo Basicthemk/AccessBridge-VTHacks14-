@@ -108,11 +108,44 @@ html[data-dyslexia="true"] {
   .text-balance {
     text-wrap: balance;
   }
+  /* Dyslexia toggle: show the word that matches <html data-dyslexia>. */
+  .dys-on {
+    display: none;
+  }
+  html[data-dyslexia="true"] .dys-on {
+    display: inline;
+  }
+  html[data-dyslexia="true"] .dys-off {
+    display: none;
+  }
+}
+
+/* Skip link: off-screen until it takes keyboard focus. */
+.skip-link {
+  position: absolute;
+  left: var(--space-3);
+  top: var(--space-2);
+  z-index: 50;
+  transform: translateY(-200%);
+  border-radius: var(--radius-md);
+  background: var(--color-ink);
+  padding: var(--space-2) var(--space-3);
+  font-weight: 700;
+  color: var(--color-surface);
+}
+.skip-link:focus {
+  transform: none;
+}
+
+/* The target of the skip link is focused by script, so it needs no ring of its own. */
+main:focus {
+  outline: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }

@@ -5,8 +5,9 @@ export const metadata = { title: "Upload a lecture · AccessBridge" };
 
 export default function UploadPage() {
   return (
-    <main className="mx-auto max-w-6xl px-3 py-5 md:px-5">
+    <>
       <AppHeader />
+      <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-3 pb-5 pt-4 md:px-5">
       <div className="mx-auto mt-5 max-w-prose">
         <h1 className="text-4xl font-semibold">Upload a lecture</h1>
         <p className="mb-4 mt-2">
@@ -15,5 +16,6 @@ export default function UploadPage() {
         <UploadForm />
       </div>
     </main>
+    </>
   );
 }

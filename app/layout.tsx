@@ -3,6 +3,7 @@ import { Fraunces, Atkinson_Hyperlegible } from "next/font/google";
 import "@fontsource/opendyslexic/latin-400.css";
 import "@fontsource/opendyslexic/latin-700.css";
 import "./globals.css";
+import { APPLY_SAVED_SCRIPT } from "@/lib/dyslexia-mode";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -26,8 +27,15 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${fraunces.variable} ${atkinson.variable}`}>
-      <body className="min-h-screen font-body antialiased">{children}</body>
+    // suppressHydrationWarning: the head script sets data-dyslexia before React hydrates.
+    <html lang="en" className={`${fraunces.variable} ${atkinson.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: APPLY_SAVED_SCRIPT }} />
+      </head>
+      <body className="min-h-screen font-body antialiased">
+        <a href="#main" className="skip-link">Skip to main content</a>
+        {children}
+      </body>
     </html>
   );
 }

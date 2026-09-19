@@ -6,6 +6,7 @@ import AppHeader from "@/components/AppHeader";
 import TranscriptStatus from "@/components/TranscriptStatus";
 import GenerationStatus from "@/components/GenerationStatus";
 import StudyMaterialView from "@/components/StudyMaterial";
+import AccommodationRequest from "@/components/AccommodationRequest";
 import { transcriptState } from "@/lib/transcript-status";
 import { generationState, type GeneratedContentRow } from "@/lib/generation-status";
 import { InvalidMaterialError, parseStudyMaterial, type StudyMaterial } from "@/lib/study-material";
@@ -75,33 +76,34 @@ export default async function LecturePage({ params }: { params: { id: string } }
     : [];
 
   return (
-    <main className="mx-auto max-w-6xl px-3 py-5 md:px-5">
+    <>
       <AppHeader />
+      <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-3 pb-5 pt-4 md:px-5">
+        <p className="mt-4">
+          <Link href="/dashboard" className="font-bold text-accent underline underline-offset-4">
+            Back to your lectures
+          </Link>
+        </p>
 
-      <p className="mt-4">
-        <Link href="/dashboard" className="font-bold text-accent underline underline-offset-4">
-          Back to your lectures
-        </Link>
-      </p>
+        <h1 className="mt-3 text-4xl font-semibold">{lecture.title}</h1>
+        <p className="mt-2">
+          Uploaded{" "}
+          {new Date(lecture.created_at).toLocaleDateString("en-US", { dateStyle: "medium", timeZone: "UTC" })}. Study
+          profile: <strong>{profile?.label ?? "Not set"}</strong>.
+        </p>
 
-      <h1 className="mt-3 text-4xl font-semibold">{lecture.title}</h1>
-      <p className="mt-2">
-        Uploaded{" "}
-        {new Date(lecture.created_at).toLocaleDateString("en-US", { dateStyle: "medium", timeZone: "UTC" })}. Study
-        profile: <strong>{profile?.label ?? "Not set"}</strong>.
-      </p>
-
-      {!transcriptReady && (
-        <section aria-labelledby="transcript-status" className="mt-5">
-          <h2 id="transcript-status" className="text-2xl font-semibold">Transcript</h2>
-          <div className="mt-3">
+        {/* The status controls stay in the page once the work finishes, so the change to "ready" is announced. */}
+        <section aria-labelledby="progress" className="mt-5">
+          <h2 id="progress" className="text-2xl font-semibold">Progress</h2>
+          <div className="mt-3 space-y-3">
             <TranscriptStatus lectureId={lecture.id} state={tState} />
+            {transcriptReady && profile && !loadFailed && (
+              <GenerationStatus lectureId={lecture.id} state={gState} profileLabel={profile.label} />
+            )}
           </div>
         </section>
-      )}
 
-      {transcriptReady && (
-        <>
+        {transcriptReady && (
           <section aria-labelledby="study" className="mt-6">
             <h2 id="study" className="text-3xl font-semibold">Study material</h2>
 
@@ -117,19 +119,26 @@ export default async function LecturePage({ params }: { params: { id: string } }
               </p>
             )}
 
-            {profile && !loadFailed && !(material && gState.kind === "ready") && (
-              <div className="mt-3">
-                <GenerationStatus lectureId={lecture.id} state={gState} profileLabel={profile.label} />
-              </div>
-            )}
-
-            {material && (
+            {material ? (
               <div className="mt-4">
                 <StudyMaterialView material={material} />
               </div>
+            ) : (
+              profile && !loadFailed && <p className="mt-3 max-w-prose">Your study material will appear here.</p>
             )}
           </section>
+        )}
 
+        {profile && user?.email && (
+          <section aria-labelledby="accommodations" className="mt-6">
+            <h2 id="accommodations" className="text-3xl font-semibold">Ask for accommodations</h2>
+            <div className="mt-3">
+              <AccommodationRequest lectureId={lecture.id} profileLabel={profile.label} studentEmail={user.email} />
+            </div>
+          </section>
+        )}
+
+        {transcriptReady && (
           <section aria-labelledby="transcript" className="mt-7">
             <h2 id="transcript" className="text-3xl font-semibold">Full transcript</h2>
             <div className={`reading flow mt-4 ${profileType === "dyslexia" ? "reading-relaxed" : ""}`}>
@@ -138,8 +147,8 @@ export default async function LecturePage({ params }: { params: { id: string } }
               ))}
             </div>
           </section>
-        </>
-      )}
-    </main>
+        )}
+      </main>
+    </>
   );
 }

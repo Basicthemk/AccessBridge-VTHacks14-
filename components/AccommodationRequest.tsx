@@ -1,7 +1,34 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MAX_BODY, checkBody, checkProfessorEmail } from "@/lib/accommodation";
+
+export type ResumableDraft = { id: string; body: string; professorEmail: string; savedOn: string };
+
+// Edits are kept in this browser only, per draft, so a reload doesn't lose them. Cleared on send.
+const editsKey = (id: string) => `ab-draft-${id}`;
+function loadEdits(id: string): { to: string; body: string } | null {
+  try {
+    const v = JSON.parse(localStorage.getItem(editsKey(id)) ?? "null");
+    return v && typeof v.to === "string" && typeof v.body === "string" ? v : null;
+  } catch {
+    return null;
+  }
+}
+function saveEdits(id: string, to: string, body: string) {
+  try {
+    localStorage.setItem(editsKey(id), JSON.stringify({ to, body }));
+  } catch {
+    // Storage can be blocked or full. The draft still works for this page view.
+  }
+}
+function clearEdits(id: string) {
+  try {
+    localStorage.removeItem(editsKey(id));
+  } catch {
+    // Nothing to clean up if storage is blocked.
+  }
+}
 
 type Stage = "idle" | "drafting" | "editing" | "sending" | "sent";
 
@@ -30,10 +57,12 @@ export default function AccommodationRequest({
   lectureId,
   profileLabel,
   studentEmail,
+  resumable,
 }: {
   lectureId: string;
   profileLabel: string;
   studentEmail: string;
+  resumable: ResumableDraft | null;
 }) {
   const [stage, setStage] = useState<Stage>("idle");
   const [draftId, setDraftId] = useState<string | null>(null);
@@ -44,11 +73,21 @@ export default function AccommodationRequest({
   const [bodyError, setBodyError] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState("");
   const [announce, setAnnounce] = useState("");
+  const [resume, setResume] = useState<ResumableDraft | null>(resumable);
+  const [confirmingNew, setConfirmingNew] = useState(false);
+  // The text as last written by the model, so we can tell whether the student has changed it.
+  const originalBody = useRef("");
+  const keepRef = useRef<HTMLButtonElement>(null);
+  const newDraftBtnRef = useRef<HTMLButtonElement>(null);
   const toRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const sentRef = useRef<HTMLDivElement>(null);
 
   const busy = stage === "drafting" || stage === "sending";
+
+  useEffect(() => {
+    if (stage === "editing" && draftId) saveEdits(draftId, to, body);
+  }, [stage, draftId, to, body]);
 
   async function callJson(url: string, init?: RequestInit) {
     const res = await fetch(url, init);
@@ -66,14 +105,55 @@ export default function AccommodationRequest({
       ? "The request didn’t go through because the connection dropped. Check your internet, then try again."
       : (err as Error).message;
 
+  // Writing a new draft replaces the message, so ask first if the student has changed it.
+  function askNewDraft() {
+    if (busy) return;
+    if (draftId && body !== originalBody.current) {
+      setConfirmingNew(true);
+      setAnnounce("You have edits in this message. Choose Replace with a new draft, or Keep my edits.");
+      setTimeout(() => keepRef.current?.focus(), 0);
+      return;
+    }
+    void draft();
+  }
+
+  function keepEdits() {
+    setConfirmingNew(false);
+    setAnnounce("Kept your edits.");
+    setTimeout(() => newDraftBtnRef.current?.focus(), 0);
+  }
+
+  function resumeDraft(r: ResumableDraft) {
+    const saved = loadEdits(r.id);
+    setDraftId(r.id);
+    originalBody.current = r.body;
+    setTo(saved?.to ?? r.professorEmail);
+    setBody(saved?.body ?? r.body);
+    setToError(null);
+    setBodyError(null);
+    setProblem(null);
+    setResume(null);
+    setStage("editing");
+    setAnnounce(
+      saved
+        ? "Resumed your draft with the edits you made in this browser. Check the message, then choose Send email."
+        : "Resumed your draft. Check the message, then choose Send email."
+    );
+    setTimeout(() => toRef.current?.focus(), 0);
+  }
+
   async function draft() {
     if (busy) return;
+    setConfirmingNew(false);
     setStage("drafting");
     setProblem(null);
     setAnnounce("Writing your draft. This can take a few seconds.");
     try {
       const data = await callJson(`/api/lectures/${lectureId}/accommodation`, { method: "POST" });
+      if (draftId) clearEdits(draftId);
       setDraftId(data.id);
+      originalBody.current = data.body;
+      setResume(null);
       setBody(data.body);
       setToError(null);
       setBodyError(null);
@@ -106,6 +186,7 @@ export default function AccommodationRequest({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ professorEmail: email.value, body: text.value }),
       });
+      clearEdits(draftId);
       setSentTo(data.to);
       setStage("sent");
       setAnnounce(`Email sent to ${data.to}.`);
@@ -119,6 +200,8 @@ export default function AccommodationRequest({
 
   function reset() {
     setStage("idle");
+    setConfirmingNew(false);
+    setResume(null);
     setDraftId(null);
     setTo("");
     setBody("");
@@ -136,7 +219,22 @@ export default function AccommodationRequest({
       {/* Always in the page so progress is announced when its text changes. */}
       <p role="status" className="sr-only">{announce}</p>
 
-      {stage === "idle" && (
+      {stage === "idle" && resume && (
+        <div role="group" aria-labelledby="resume-title" className="mt-3 rounded-md border-2 border-accent bg-surface p-3">
+          <p id="resume-title" className="font-bold">You have an unsent draft from {resume.savedOn}.</p>
+          <p className="mt-1">Pick up where you left off, or write a new one.</p>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button type="button" onClick={() => resumeDraft(resume)} className={primaryBtn}>
+              Resume draft
+            </button>
+            <button type="button" onClick={draft} className={outlineBtn}>
+              Draft an email
+            </button>
+          </div>
+        </div>
+      )}
+
+      {stage === "idle" && !resume && (
         <button type="button" onClick={draft} className={`${outlineBtn} mt-3`}>
           Draft an email
         </button>
@@ -223,10 +321,30 @@ export default function AccommodationRequest({
             <button type="button" onClick={send} aria-disabled={busy} className={primaryBtn}>
               {stage === "sending" ? "Sending…" : "Send email"}
             </button>
-            <button type="button" onClick={draft} aria-disabled={busy} className={outlineBtn}>
+            <button ref={newDraftBtnRef} type="button" onClick={askNewDraft} aria-disabled={busy} className={outlineBtn}>
               Write a new draft
             </button>
           </div>
+
+          {confirmingNew && (
+            <div role="group" aria-labelledby="replace-title" className="rounded-md border-2 border-error bg-surface p-3">
+              <p id="replace-title" className="inline-flex items-start gap-2 font-bold text-error">
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" className="mt-1 shrink-0">
+                  <path d="M8 2l6.5 12h-13z M8 6.5v3.5 M8 12v.5" />
+                </svg>
+                <span>Replace your edits?</span>
+              </p>
+              <p className="mt-1">A new draft replaces the message above, including the changes you made. The professor’s address stays.</p>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <button ref={keepRef} type="button" onClick={keepEdits} className={primaryBtn}>
+                  Keep my edits
+                </button>
+                <button type="button" onClick={draft} aria-disabled={busy} className={outlineBtn}>
+                  Replace with a new draft
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

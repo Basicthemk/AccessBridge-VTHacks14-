@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useSharedPoll } from "@/lib/use-shared-poll";
 import type { GenerationState } from "@/lib/generation-status";
-
-const POLL_MS = 5000;
 
 const btn =
   "rounded-md border-2 border-accent px-3 py-2 font-bold text-accent hover:bg-accent hover:text-surface";
@@ -26,12 +25,8 @@ export default function GenerationStatus({
 
   const processing = state.kind === "processing";
 
-  // While the material is being made, re-read the page until it settles.
-  useEffect(() => {
-    if (!processing) return;
-    const t = setInterval(() => router.refresh(), POLL_MS);
-    return () => clearInterval(t);
-  }, [processing, router]);
+  // While this is being made, join the page's one shared poll (see use-shared-poll.ts).
+  useSharedPoll(processing);
 
   async function start() {
     setStarting(true);

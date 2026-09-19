@@ -82,7 +82,7 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
                 <label
                   key={p.value}
                   className={`flex cursor-pointer gap-3 rounded-md border-2 p-3 transition-colors focus-within:outline focus-within:outline-[3px] focus-within:outline-offset-2 focus-within:outline-accent ${
-                    selected ? "border-accent bg-background" : "border-border bg-surface"
+                    selected ? "border-accent bg-background ring-2 ring-accent" : "border-accent bg-surface"
                   }`}
                 >
                   <input
@@ -92,7 +92,14 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
                   <span>
                     <span className="block font-bold">
                       {p.label}
-                      {selected && <span className="ml-2 text-accent">Selected</span>}
+                      {selected && (
+                        <span className="ml-2 inline-flex items-center gap-1 text-accent">
+                          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <path d="M3 8.5l3.5 3.5L13 4.5" />
+                          </svg>
+                          Selected
+                        </span>
+                      )}
                     </span>
                     <span className="block text-sm">{p.blurb}</span>
                   </span>

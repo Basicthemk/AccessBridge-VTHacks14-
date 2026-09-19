@@ -23,7 +23,7 @@ export default async function AppHeader() {
             AccessBridge
           </Link>
           <nav aria-label="Account" className="flex flex-wrap items-center gap-3">
-            <DyslexiaToggle />
+            <DyslexiaToggle defaultOn={defaultOn} />
             <form action="/auth/signout" method="post">
               <button className="rounded-md border-2 border-accent px-3 py-2 font-bold text-accent hover:bg-accent hover:text-surface">
                 Sign out

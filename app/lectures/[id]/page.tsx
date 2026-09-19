@@ -71,6 +71,26 @@ export default async function LecturePage({ params }: { params: { id: string } }
     }
   }
 
+  // The newest request for this lecture, if it was never sent, can be picked up again.
+  let resumable: { id: string; body: string; professorEmail: string; savedOn: string } | null = null;
+  if (profile && user?.email) {
+    const { data: latest } = await supabase
+      .from("accommodation_requests")
+      .select("id, status, email_body, professor_email, created_at")
+      .eq("lecture_id", lecture.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (latest && (latest.status === "draft" || latest.status === "failed")) {
+      resumable = {
+        id: latest.id,
+        body: latest.email_body,
+        professorEmail: latest.professor_email ?? "",
+        savedOn: new Date(latest.created_at).toLocaleDateString("en-US", { dateStyle: "medium", timeZone: "UTC" }),
+      };
+    }
+  }
+
   const paragraphs: string[] = transcriptReady
     ? lecture.transcript!.split(/\n\s*\n/).map((p: string) => p.trim()).filter(Boolean)
     : [];
@@ -121,7 +141,7 @@ export default async function LecturePage({ params }: { params: { id: string } }
 
             {material ? (
               <div className="mt-4">
-                <StudyMaterialView material={material} />
+                <StudyMaterialView material={material} lectureId={lecture.id} />
               </div>
             ) : (
               profile && !loadFailed && <p className="mt-3 max-w-prose">Your study material will appear here.</p>
@@ -133,7 +153,7 @@ export default async function LecturePage({ params }: { params: { id: string } }
           <section aria-labelledby="accommodations" className="mt-6">
             <h2 id="accommodations" className="text-3xl font-semibold">Ask for accommodations</h2>
             <div className="mt-3">
-              <AccommodationRequest lectureId={lecture.id} profileLabel={profile.label} studentEmail={user.email} />
+              <AccommodationRequest lectureId={lecture.id} profileLabel={profile.label} studentEmail={user.email} resumable={resumable} />
             </div>
           </section>
         )}

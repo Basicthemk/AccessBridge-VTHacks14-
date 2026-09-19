@@ -1,3 +1,4 @@
+import ReadAloud from "@/components/ReadAloud";
 import type { DeafHohMaterial, DyslexiaMaterial, StudyMaterial } from "@/lib/study-material";
 
 // Section headings inside the material. Structure comes from real headings and
@@ -17,11 +18,12 @@ function Terms({ items }: { items: { term: string; definition: string }[] }) {
   );
 }
 
-function Dyslexia({ m }: { m: DyslexiaMaterial }) {
+function Dyslexia({ m, lectureId }: { m: DyslexiaMaterial; lectureId: string }) {
   return (
     <div className="reading reading-relaxed flow-lg">
       <section aria-labelledby="summary">
         <h3 id="summary" className={h3}>Summary</h3>
+        <div className="mt-2"><ReadAloud lectureId={lectureId} section="summary" label="summary" /></div>
         <div className="flow-lg mt-3">
           {m.summary_chunks.map((c, i) => (
             <section key={i} className="border-l-4 border-accent pl-3">
@@ -35,6 +37,7 @@ function Dyslexia({ m }: { m: DyslexiaMaterial }) {
       {m.key_terms.length > 0 && (
         <section aria-labelledby="terms">
           <h3 id="terms" className={h3}>Key terms</h3>
+          <div className="mt-2"><ReadAloud lectureId={lectureId} section="terms" label="key terms" /></div>
           <div className="mt-3">
             <Terms items={m.key_terms} />
           </div>
@@ -43,6 +46,7 @@ function Dyslexia({ m }: { m: DyslexiaMaterial }) {
 
       <section aria-labelledby="outline">
         <h3 id="outline" className={h3}>Outline</h3>
+        <div className="mt-2"><ReadAloud lectureId={lectureId} section="outline" label="outline" /></div>
         <ul className="flow mt-3 list-disc pl-4">
           {m.outline.map((p, i) => (
             <li key={i}>
@@ -113,6 +117,6 @@ function DeafHoh({ m }: { m: DeafHohMaterial }) {
   );
 }
 
-export default function StudyMaterialView({ material }: { material: StudyMaterial }) {
-  return material.profile === "dyslexia" ? <Dyslexia m={material} /> : <DeafHoh m={material} />;
+export default function StudyMaterialView({ material, lectureId }: { material: StudyMaterial; lectureId: string }) {
+  return material.profile === "dyslexia" ? <Dyslexia m={material} lectureId={lectureId} /> : <DeafHoh m={material} />;
 }

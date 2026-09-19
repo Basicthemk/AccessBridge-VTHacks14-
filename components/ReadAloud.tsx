@@ -158,7 +158,7 @@ export default function ReadAloud({
       {problem && (
         <p
           role="alert"
-          className="mt-2 inline-flex max-w-prose items-start gap-2 rounded-md border-2 border-error bg-surface px-2 py-1 font-bold text-error"
+          className="mt-2 inline-flex max-w-prose items-start gap-2 rounded-md border-2 border-error bg-surface px-3 py-2 font-bold text-error"
         >
           <svg {...icon} className="mt-1 shrink-0"><path d="M8 2l6.5 12h-13z M8 6.5v3.5 M8 12v.5" /></svg>
           <span>Problem: {problem}</span>

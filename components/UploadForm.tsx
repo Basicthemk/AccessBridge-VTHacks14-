@@ -275,7 +275,7 @@ export default function UploadForm() {
 
       {busy && picked && (
         <div>
-          <div className="flex items-baseline justify-between gap-3 font-bold">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 font-bold">
             <span>{stage === "saving" ? "Saving lecture…" : "Uploading…"}</span>
             <span>
               {percent}% · {formatBytes(Math.min(loaded, picked.file.size))} of {formatBytes(picked.file.size)}

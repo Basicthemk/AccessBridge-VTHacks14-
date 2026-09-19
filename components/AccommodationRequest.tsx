@@ -33,7 +33,7 @@ function clearEdits(id: string) {
 type Stage = "idle" | "drafting" | "editing" | "sending" | "sent";
 
 const outlineBtn =
-  "rounded-md border-2 border-accent px-3 py-2 font-bold text-accent hover:bg-accent hover:text-surface aria-disabled:opacity-60";
+  "rounded-md border-2 border-accent px-4 py-3 font-bold text-accent hover:bg-accent hover:text-surface aria-disabled:opacity-60";
 const primaryBtn =
   "rounded-md bg-primary-dark px-4 py-3 font-bold text-surface transition-colors hover:bg-ink aria-disabled:opacity-60";
 const field = "mt-1 block w-full rounded-md border-2 border-accent bg-surface px-3 py-2 text-ink";
@@ -43,7 +43,7 @@ function ErrorBox({ id, children }: { id?: string; children: React.ReactNode }) 
     <p
       id={id}
       role="alert"
-      className="mt-2 inline-flex max-w-prose items-start gap-2 rounded-md border-2 border-error bg-surface px-2 py-1 font-bold text-error"
+      className="mt-2 inline-flex max-w-prose items-start gap-2 rounded-md border-2 border-error bg-surface px-3 py-2 font-bold text-error"
     >
       <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" className="mt-1 shrink-0">
         <path d="M8 2l6.5 12h-13z M8 6.5v3.5 M8 12v.5" />

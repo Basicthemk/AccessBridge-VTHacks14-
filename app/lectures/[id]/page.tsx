@@ -99,14 +99,14 @@ export default async function LecturePage({ params }: { params: { id: string } }
   return (
     <>
       <AppHeader />
-      <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-3 pb-5 pt-4 md:px-5">
-        <p className="mt-4">
+      <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-3 pb-6 pt-5 md:px-5">
+        <p>
           <Link href="/dashboard" className="font-bold text-accent underline underline-offset-4">
             Back to your lectures
           </Link>
         </p>
 
-        <h1 className="mt-3 text-4xl font-semibold">{lecture.title}</h1>
+        <h1 className="mt-3 text-4xl font-semibold text-balance">{lecture.title}</h1>
         <p className="mt-2">
           Uploaded{" "}
           {new Date(lecture.created_at).toLocaleDateString("en-US", { dateStyle: "medium", timeZone: "UTC" })}. Study
@@ -114,8 +114,8 @@ export default async function LecturePage({ params }: { params: { id: string } }
         </p>
 
         {/* The status controls stay in the page once the work finishes, so the change to "ready" is announced. */}
-        <section aria-labelledby="progress" className="mt-5">
-          <h2 id="progress" className="text-2xl font-semibold">Progress</h2>
+        <section aria-labelledby="progress" className="mt-6">
+          <h2 id="progress" className="text-3xl font-semibold">Progress</h2>
           <div className="mt-3 space-y-3">
             <TranscriptStatus lectureId={lecture.id} state={tState} />
             {transcriptReady && profile && !loadFailed && (
@@ -129,13 +129,13 @@ export default async function LecturePage({ params }: { params: { id: string } }
             <h2 id="study" className="text-3xl font-semibold">Study material</h2>
 
             {!profile && (
-              <p role="alert" className="mt-3 max-w-prose rounded-md border-2 border-error px-2 py-1 font-bold text-error">
+              <p role="alert" className="mt-3 max-w-prose rounded-md border-2 border-error bg-surface px-3 py-2 font-bold text-error">
                 Problem: We couldn’t find your study profile, so we can’t tailor the material. Sign out and back in.
               </p>
             )}
 
             {loadFailed && (
-              <p role="alert" className="mt-3 max-w-prose rounded-md border-2 border-error px-2 py-1 font-bold text-error">
+              <p role="alert" className="mt-3 max-w-prose rounded-md border-2 border-error bg-surface px-3 py-2 font-bold text-error">
                 Problem: We couldn’t load your study material. Refresh the page to try again.
               </p>
             )}
@@ -160,7 +160,7 @@ export default async function LecturePage({ params }: { params: { id: string } }
         )}
 
         {transcriptReady && (
-          <section aria-labelledby="transcript" className="mt-7">
+          <section aria-labelledby="transcript" className="mt-6">
             <h2 id="transcript" className="text-3xl font-semibold">Full transcript</h2>
             <div className={`reading flow mt-4 ${profileType === "dyslexia" ? "reading-relaxed" : ""}`}>
               {paragraphs.map((p, i) => (

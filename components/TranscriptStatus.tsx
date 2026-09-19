@@ -93,7 +93,7 @@ export default function TranscriptStatus({
       </div>
 
       {!working && state.kind === "failed" && (
-        <div role="alert" className="rounded-md border-2 border-error p-2">
+        <div role="alert" className="rounded-md border-2 border-error bg-surface p-3">
           <p className="inline-flex items-center gap-2 font-bold text-error">
             <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M8 2l6.5 12h-13z M8 6.5v3.5 M8 12v.5" />
@@ -108,7 +108,7 @@ export default function TranscriptStatus({
       )}
 
       {problem && !working && (
-        <p role="alert" className="mt-2 rounded-md border-2 border-error px-2 py-1 font-bold text-error">
+        <p role="alert" className="mt-2 rounded-md border-2 border-error bg-surface px-3 py-2 font-bold text-error">
           Problem: {problem}
         </p>
       )}

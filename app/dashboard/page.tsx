@@ -29,10 +29,9 @@ export default async function Dashboard() {
   return (
     <>
       <AppHeader />
-      <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-3 pb-5 pt-4 md:px-5">
-
-      <div className="mt-5 flex flex-wrap items-end justify-between gap-3">
-        <div>
+      <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-3 pb-6 pt-5 md:px-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-4xl font-semibold">Your lectures</h1>
           <p className="mt-2">
             Signed in as <strong>{user?.email}</strong>. Study profile:{" "}
@@ -49,13 +48,13 @@ export default async function Dashboard() {
       </div>
 
       {error && (
-        <p role="alert" className="mt-4 rounded-md border-2 border-error bg-surface px-3 py-2 font-bold text-error">
+        <p role="alert" className="mt-5 rounded-md border-2 border-error bg-surface px-3 py-2 font-bold text-error">
           Problem: We couldn’t load your lectures. Refresh the page to try again.
         </p>
       )}
 
       {!error && lectures?.length === 0 && (
-        <section className="mt-4 rounded-lg border-2 border-dashed border-accent p-5">
+        <section className="mt-5 rounded-lg border-2 border-dashed border-accent p-5">
           <h2 className="text-2xl font-semibold">No lectures yet</h2>
           <p className="mt-2 max-w-prose">
             Upload your first recording to start building your library.
@@ -70,13 +69,13 @@ export default async function Dashboard() {
       )}
 
       {lectures && lectures.length > 0 && (
-        <ul className="mt-4 space-y-3">
+        <ul className="mt-5 space-y-3">
           {lectures.map((l) => (
             <li
               key={l.id}
-              className="flex flex-wrap items-start justify-between gap-3 rounded-md border border-border bg-surface p-3"
+              className="flex flex-wrap items-start justify-between gap-3 rounded-md border border-border bg-surface p-4"
             >
-              <div>
+              <div className="min-w-0">
                 <h2 className="text-xl font-semibold">
                   <Link href={`/lectures/${l.id}`} className="text-accent underline underline-offset-4 hover:text-primary-dark">
                     {l.title}

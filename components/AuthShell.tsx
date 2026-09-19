@@ -2,7 +2,7 @@ export default function AuthShell({ children }: { children: React.ReactNode }) {
   return (
     <main id="main" tabIndex={-1} className="mx-auto grid min-h-screen max-w-6xl gap-6 px-3 py-5 md:grid-cols-2 md:items-center md:gap-7 md:px-5">
       <section aria-labelledby="pitch" className="max-w-prose">
-        <p className="font-heading text-2xl font-semibold text-primary">AccessBridge</p>
+        <p className="font-heading text-2xl font-semibold text-primary-dark">AccessBridge</p>
         <h1 id="pitch" className="mt-4 text-4xl font-semibold text-balance md:text-5xl">
           The lecture, made readable. The paperwork, handled.
         </h1>
@@ -14,7 +14,7 @@ export default function AuthShell({ children }: { children: React.ReactNode }) {
 
         <figure className="mt-5 rounded-lg border border-border bg-surface p-4">
           <figcaption className="font-bold">What the dense version becomes</figcaption>
-          <p className="mt-2 text-ink/70 line-through decoration-error decoration-2">
+          <p className="mt-2 line-through decoration-error decoration-2">
             Heteroscedasticity, wherein the variance of residuals is non-constant across
             levels of the predictor, violates the homoscedasticity assumption of ordinary
             least squares.

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { PROFILES, type DisabilityProfile } from "@/lib/profiles";
 
 const outlineBtn =
-  "rounded-md border-2 border-accent px-3 py-2 font-bold text-accent hover:bg-accent hover:text-surface aria-disabled:opacity-60";
+  "rounded-md border-2 border-accent px-4 py-3 font-bold text-accent hover:bg-accent hover:text-surface aria-disabled:opacity-60";
 const primaryBtn =
   "rounded-md bg-primary-dark px-4 py-3 font-bold text-surface transition-colors hover:bg-ink aria-disabled:opacity-60";
 
@@ -108,7 +108,7 @@ export default function ProfileSwitch({ current }: { current: DisabilityProfile 
             })}
           </div>
           {problem && (
-            <p role="alert" className="mt-3 rounded-md border-2 border-error bg-surface px-2 py-1 font-bold text-error">
+            <p role="alert" className="mt-3 rounded-md border-2 border-error bg-surface px-3 py-2 font-bold text-error">
               Problem: {problem}
             </p>
           )}

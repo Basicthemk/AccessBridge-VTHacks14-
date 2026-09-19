@@ -55,7 +55,22 @@ html[data-dyslexia="true"] {
     line-height: var(--body-line-height);
     letter-spacing: var(--body-letter-spacing);
     word-spacing: var(--body-word-spacing);
+    /* A long unbroken title or address wraps instead of pushing the page wider than the screen. */
+    overflow-wrap: break-word;
     transition: letter-spacing 200ms ease, word-spacing 200ms ease;
+  }
+
+  /* Tailwind's default placeholder grey (#9ca3af) is about 2.5:1 on white. Ink at 65% is about 5:1.
+     The -moz rule is separate because a browser drops a whole selector list it can't parse. */
+  input::placeholder,
+  textarea::placeholder {
+    opacity: 1;
+    color: color-mix(in srgb, var(--color-ink) 65%, var(--color-surface));
+  }
+  input::-moz-placeholder,
+  textarea::-moz-placeholder {
+    opacity: 1;
+    color: color-mix(in srgb, var(--color-ink) 65%, var(--color-surface));
   }
 
   h1, h2, h3, h4 {
@@ -72,7 +87,7 @@ html[data-dyslexia="true"] {
   }
 
   ::selection {
-    background: var(--color-primary);
+    background: var(--color-primary-dark);
     color: var(--color-surface);
   }
 }

@@ -142,6 +142,24 @@ main:focus {
   outline: none;
 }
 
+/* A concept-map idea that a link just jumped to. It is focused by script, so it gets a ring while
+   the two-second mark is on (and while keyboard-focused). The ring is a shape, not only a colour. */
+.concept-target {
+  border-radius: var(--radius-sm);
+  transition: background-color 400ms ease;
+}
+.concept-target:focus {
+  outline: none;
+}
+.concept-target:focus-visible,
+.concept-target[data-flash] {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 4px;
+}
+.concept-target[data-flash] {
+  background-color: color-mix(in srgb, var(--color-primary) 16%, var(--color-surface));
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

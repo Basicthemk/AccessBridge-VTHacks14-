@@ -1,3 +1,4 @@
+import ConceptLink from "@/components/ConceptLink";
 import { relationSentence, type Concept, type ConceptMap } from "@/lib/study-material";
 
 // The concept map as real headings and lists. There is no diagram: every connection is a
@@ -44,7 +45,7 @@ function Body({ map }: { map: ConceptMap }) {
             <h4 id={`theme-${i}`} className="text-xl font-semibold">{theme.name}</h4>
             <ul className="flow mt-2">
               {theme.concepts.map((c) => (
-                <li key={c.id} id={`concept-${c.id}`} className="border-l-4 border-accent pl-3">
+                <li key={c.id} id={`concept-${c.id}`} tabIndex={-1} className="concept-target border-l-4 border-accent pl-3">
                   <h5 className="font-bold">{c.name}</h5>
                   <p className="mt-1">{c.explanation}</p>
                   {c.relations.length > 0 && (
@@ -57,9 +58,7 @@ function Body({ map }: { map: ConceptMap }) {
                         return (
                           <li key={r.to}>
                             {head}
-                            <a href={`#concept-${to.id}`} className="font-bold text-accent underline underline-offset-4">
-                              {to.name}
-                            </a>
+                            <ConceptLink id={to.id}>{to.name}</ConceptLink>
                             .
                           </li>
                         );

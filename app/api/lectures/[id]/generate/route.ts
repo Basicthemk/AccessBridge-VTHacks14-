@@ -3,6 +3,7 @@ import { waitUntil } from "@vercel/functions";
 import { createClient } from "@/lib/supabase/server";
 import { STALE_AFTER_MS, transcriptState } from "@/lib/transcript-status";
 import { GenerateError, generateStudyMaterial } from "@/lib/generate-study-material";
+import { removeAudioFiles } from "@/lib/read-aloud-cleanup";
 import type { DisabilityProfile } from "@/lib/profiles";
 
 // Same ceiling as the transcription route. The model calls stop starting new
@@ -81,6 +82,8 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
         .update({ content_json: material, status: "ready", error: null, updated_at: new Date().toISOString() })
         .match(where);
       if (error) throw new GenerateError("The study material was made but couldn’t be saved. Try again.", error.message);
+      // The words changed, so audio made from the old material can never be asked for again.
+      if (profile === "dyslexia") await removeAudioFiles(supabase, { lectureId });
     } catch (err) {
       const e =
         err instanceof GenerateError

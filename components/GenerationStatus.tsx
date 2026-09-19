@@ -89,6 +89,10 @@ export default function GenerationStatus({
         <button type="button" onClick={start} className={`${btn} mt-2`}>Make study material</button>
       )}
 
+      {!working && state.kind === "ready" && (
+        <button type="button" onClick={start} className={`${btn} mt-2`}>Make study material again</button>
+      )}
+
       {!working && state.kind === "failed" && (
         <div role="alert" className="rounded-md border-2 border-error p-2">
           <p className="inline-flex items-center gap-2 font-bold text-error">

@@ -99,24 +99,24 @@ export default async function LecturePage({ params }: { params: { id: string } }
   return (
     <>
       <AppHeader />
-      <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-3 pb-6 pt-5 md:px-5">
+      <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-3 pb-7 pt-6 md:px-5">
         <p>
-          <Link href="/dashboard" className="font-bold text-accent underline underline-offset-4">
+          <Link href="/dashboard" className="btn btn-quiet -ml-3">
             Back to your lectures
           </Link>
         </p>
 
-        <h1 className="mt-3 text-4xl font-semibold text-balance">{lecture.title}</h1>
-        <p className="mt-2">
+        <h1 className="mt-2 max-w-4xl text-4xl font-semibold text-balance md:text-5xl">{lecture.title}</h1>
+        <p className="mt-3 text-lg">
           Uploaded{" "}
           {new Date(lecture.created_at).toLocaleDateString("en-US", { dateStyle: "medium", timeZone: "UTC" })}. Study
           profile: <strong>{profile?.label ?? "Not set"}</strong>.
         </p>
 
         {/* The status controls stay in the page once the work finishes, so the change to "ready" is announced. */}
-        <section aria-labelledby="progress" className="mt-6">
-          <h2 id="progress" className="text-3xl font-semibold">Progress</h2>
-          <div className="mt-3 space-y-3">
+        <section aria-labelledby="progress" className="band split">
+          <h2 id="progress" className="split-side text-2xl font-semibold">Progress</h2>
+          <div className="split-main space-y-3">
             <TranscriptStatus lectureId={lecture.id} state={tState} />
             {transcriptReady && profile && !loadFailed && (
               <GenerationStatus lectureId={lecture.id} state={gState} profileLabel={profile.label} />
@@ -125,52 +125,54 @@ export default async function LecturePage({ params }: { params: { id: string } }
         </section>
 
         {transcriptReady && (
-          <section aria-labelledby="study" className="mt-6">
-            <h2 id="study" className="text-3xl font-semibold">Study material</h2>
+          <section aria-labelledby="study" className="band split">
+            <h2 id="study" className="split-side text-2xl font-semibold md:sticky md:top-4 md:self-start">Study material</h2>
 
-            {!profile && (
-              <p role="alert" className="mt-3 max-w-prose rounded-md border-2 border-error bg-surface px-3 py-2 font-bold text-error">
-                Problem: We couldn’t find your study profile, so we can’t tailor the material. Sign out and back in.
-              </p>
-            )}
+            <div className="split-main">
+              {!profile && (
+                <p role="alert" className="callout-error max-w-prose">
+                  Problem: We couldn’t find your study profile, so we can’t tailor the material. Sign out and back in.
+                </p>
+              )}
 
-            {loadFailed && (
-              <p role="alert" className="mt-3 max-w-prose rounded-md border-2 border-error bg-surface px-3 py-2 font-bold text-error">
-                Problem: We couldn’t load your study material. Refresh the page to try again.
-              </p>
-            )}
+              {loadFailed && (
+                <p role="alert" className="callout-error max-w-prose">
+                  Problem: We couldn’t load your study material. Refresh the page to try again.
+                </p>
+              )}
 
-            {material ? (
-              <div className="mt-4">
+              {material ? (
                 <StudyMaterialView material={material} lectureId={lecture.id} />
-              </div>
-            ) : (
-              profile && !loadFailed && <p className="mt-3 max-w-prose">Your study material will appear here.</p>
-            )}
+              ) : (
+                profile && !loadFailed && <p className="max-w-prose">Your study material will appear here.</p>
+              )}
+            </div>
           </section>
         )}
 
         {profile && user?.email && (
-          <section aria-labelledby="accommodations" className="mt-6">
-            <h2 id="accommodations" className="text-3xl font-semibold">Ask for accommodations</h2>
-            <div className="mt-3">
+          <section aria-labelledby="accommodations" className="band split">
+            <h2 id="accommodations" className="split-side text-2xl font-semibold md:sticky md:top-4 md:self-start">Ask for accommodations</h2>
+            <div className="split-main">
               <AccommodationRequest lectureId={lecture.id} profileLabel={profile.label} studentEmail={user.email} resumable={resumable} senderReady={senderVerified()} />
-            </div>
-            <h3 className="mt-6 text-2xl font-semibold">Follow-up reminder</h3>
-            <div className="mt-2">
-              <FollowUpReminder lectureId={lecture.id} lectureTitle={lecture.title} />
+              <div className="band">
+                <h3 className="text-xl font-semibold">Follow-up reminder</h3>
+                <div className="mt-2">
+                  <FollowUpReminder lectureId={lecture.id} lectureTitle={lecture.title} />
+                </div>
+              </div>
             </div>
           </section>
         )}
 
         {transcriptReady && (
-          <section aria-labelledby="transcript" className="mt-6">
-            <h2 id="transcript" className="text-3xl font-semibold">Full transcript</h2>
-            <div className={`reading flow mt-4 ${profileType === "dyslexia" ? "reading-relaxed" : ""}`}>
+          <section aria-labelledby="transcript" className="band split">
+            <h2 id="transcript" className="split-side text-2xl font-semibold md:sticky md:top-4 md:self-start">Full transcript</h2>
+            <div className={`split-main reading flow ${profileType === "dyslexia" ? "reading-relaxed" : ""}`}>
               {paragraphs.map((p, i) => (
                 <p key={i}>
                   {p.seconds !== null && (
-                    <time dateTime={`PT${p.seconds}S`} className="mb-1 block font-bold tabular-nums text-accent">
+                    <time dateTime={`PT${p.seconds}S`} className="mb-1 block text-sm font-bold tabular-nums text-accent">
                       <span className="sr-only">Starts at </span>
                       {formatTime(p.seconds)}
                     </time>

@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSharedPoll } from "@/lib/use-shared-poll";
 import type { GenerationState } from "@/lib/generation-status";
 
-const btn =
-  "rounded-md border-2 border-accent px-3 py-2 font-bold text-accent hover:bg-accent hover:text-surface";
+const btn = "btn btn-sm btn-outline";
 
 export default function GenerationStatus({
   lectureId,
@@ -63,7 +62,7 @@ export default function GenerationStatus({
       {/* Always in the page, so a change of text is announced. A region inserted with its text is often missed. */}
       <div ref={statusRef} tabIndex={-1} role="status">
         {working && (
-          <p className="inline-flex items-center gap-2 rounded-sm border-2 border-accent px-2 py-1 font-bold text-accent">
+          <p className="chip border-accent text-accent">
             <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" className="animate-spin">
               <path d="M8 2a6 6 0 1 0 6 6" />
             </svg>
@@ -71,7 +70,7 @@ export default function GenerationStatus({
           </p>
         )}
         {!working && state.kind === "ready" && (
-          <p className="inline-flex items-center gap-2 rounded-sm border-2 border-success px-2 py-1 font-bold text-success">
+          <p className="chip border-success text-success">
             <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M3 8.5l3.5 3.5L13 4.5" />
             </svg>
@@ -86,11 +85,11 @@ export default function GenerationStatus({
       </div>
 
       {!working && state.kind === "none" && (
-        <button type="button" onClick={start} className={`${btn} mt-2`}>Make study material</button>
+        <button type="button" onClick={start} className="btn btn-sm btn-primary mt-3">Make study material</button>
       )}
 
       {!working && state.kind === "ready" && (
-        <button type="button" onClick={start} className={`${btn} mt-2`}>Make study material again</button>
+        <button type="button" onClick={start} className="btn btn-quiet -ml-3 mt-1">Make study material again</button>
       )}
 
       {!working && state.kind === "failed" && (
@@ -107,7 +106,7 @@ export default function GenerationStatus({
       )}
 
       {problem && !working && (
-        <p role="alert" className="mt-2 rounded-md border-2 border-error bg-surface px-3 py-2 font-bold text-error">
+        <p role="alert" className="callout-error mt-2">
           Problem: {problem}
         </p>
       )}

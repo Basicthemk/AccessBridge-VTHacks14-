@@ -81,7 +81,8 @@ ${trimmed ? "\nThis lecture is long, so only the parts most related to the quest
 ${transcript}
 </transcript>`;
 
-function explain(err: unknown): ChatError {
+/** Turns any failure into a ChatError whose message is safe to show. Shared with the site-help chat. */
+export function explainChatError(err: unknown): ChatError {
   if (err instanceof ChatError) return err;
   const status = (err as { status?: number })?.status;
   const detail = err instanceof Error ? err.message : String(err);
@@ -134,6 +135,6 @@ export async function answerLectureQuestion(lecture: { title: string; transcript
       log: "lecture-chat",
     });
   } catch (err) {
-    throw explain(err);
+    throw explainChatError(err);
   }
 }

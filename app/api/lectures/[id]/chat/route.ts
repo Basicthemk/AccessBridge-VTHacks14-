@@ -10,6 +10,37 @@ export const dynamic = "force-dynamic";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_QUESTIONS_PER_DAY = 100;
 
+// What the chat widget shows when it opens on a lecture page: the title and the saved questions.
+export async function GET(_req: Request, { params }: { params: { id: string } }) {
+  if (!UUID.test(params.id)) return NextResponse.json({ error: "Lecture not found." }, { status: 404 });
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Sign in again to continue." }, { status: 401 });
+
+  const { data: lecture } = await supabase
+    .from("lectures")
+    .select("id, title, transcript, transcript_status")
+    .eq("id", params.id)
+    .maybeSingle();
+  if (!lecture) return NextResponse.json({ error: "Lecture not found." }, { status: 404 });
+  const ready = lecture.transcript_status === "ready" && !!lecture.transcript?.trim();
+  if (!ready) return NextResponse.json({ title: lecture.title, ready: false, history: [] });
+
+  const { data, error } = await supabase
+    .from("lecture_questions")
+    .select("id, question, answer")
+    .eq("lecture_id", lecture.id)
+    .order("created_at", { ascending: true })
+    .limit(200);
+  if (error) {
+    console.error("lecture chat: history failed", error.message);
+    return NextResponse.json({ error: "We couldn’t load your earlier questions. Try again." }, { status: 500 });
+  }
+  return NextResponse.json({ title: lecture.title, ready: true, history: data ?? [] });
+}
+
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   if (!UUID.test(params.id)) return NextResponse.json({ error: "Lecture not found." }, { status: 404 });
   const supabase = createClient();

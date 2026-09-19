@@ -170,6 +170,38 @@ html[data-dyslexia="true"] {
   }
 }
 
+/* The help widget: a launcher pinned bottom-right, with its panel opening above it. It sits under the
+   skip link (z-index 50) and the page has no other fixed UI, so nothing is covered. */
+@layer components {
+  .site-chat {
+    position: fixed;
+    right: var(--space-3);
+    bottom: var(--space-3);
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--space-2);
+    /* Never wider than the screen, whatever the launcher's label says. */
+    max-width: calc(100vw - 2 * var(--space-3));
+  }
+  .site-chat-panel {
+    flex-direction: column;
+    width: 26rem;
+    max-width: 100%;
+    /* Room for the launcher below and a strip of page above. */
+    max-height: calc(100vh - 8 * var(--space-2));
+    max-height: calc(100dvh - 8 * var(--space-2));
+    overflow: hidden;
+    border: 2px solid var(--color-accent);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+  }
+  .site-chat-panel:focus {
+    outline: none;
+  }
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;

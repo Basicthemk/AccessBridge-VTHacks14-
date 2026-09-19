@@ -4,6 +4,7 @@ import "@fontsource/opendyslexic/latin-400.css";
 import "@fontsource/opendyslexic/latin-700.css";
 import "./globals.css";
 import { APPLY_SAVED_SCRIPT } from "@/lib/dyslexia-mode";
+import SiteChat from "@/components/SiteChat";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -43,6 +44,7 @@ export default function RootLayout({
       <body className="min-h-screen font-body antialiased">
         <a href="#main" className="skip-link">Skip to main content</a>
         {children}
+        <SiteChat />
       </body>
     </html>
   );

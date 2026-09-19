@@ -9,7 +9,6 @@ import StudyMaterialView from "@/components/StudyMaterial";
 import AccommodationRequest from "@/components/AccommodationRequest";
 import FollowUpReminder from "@/components/FollowUpReminder";
 import SectionNav from "@/components/SectionNav";
-import LectureChat, { type ChatTurn } from "@/components/LectureChat";
 import { senderVerified } from "@/lib/send-email";
 import { transcriptState } from "@/lib/transcript-status";
 import { formatTime, parseTranscript } from "@/lib/transcript-time";
@@ -96,20 +95,6 @@ export default async function LecturePage({ params }: { params: { id: string } }
     }
   }
 
-  let chatHistory: ChatTurn[] = [];
-  let chatLoadFailed = false;
-  if (transcriptReady) {
-    const { data, error } = await supabase
-      .from("lecture_questions")
-      .select("id, question, answer")
-      .eq("lecture_id", lecture.id)
-      .order("created_at", { ascending: true })
-      .limit(200);
-    if (error) console.error("lecture page: chat history failed", error.message);
-    chatLoadFailed = !!error;
-    chatHistory = (data as ChatTurn[] | null) ?? [];
-  }
-
   const paragraphs = transcriptReady ? parseTranscript(lecture.transcript!) : [];
 
   return (
@@ -133,7 +118,6 @@ export default async function LecturePage({ params }: { params: { id: string } }
           items={[
             { id: "progress", label: "Progress", show: true },
             { id: "study", label: "Study material", show: transcriptReady },
-            { id: "ask", label: "Ask a question", show: transcriptReady },
             { id: "accommodations", label: "Ask for accommodations", show: !!(profile && user?.email) },
             { id: "transcript", label: "Full transcript", show: transcriptReady },
           ].filter((i) => i.show)}
@@ -172,20 +156,6 @@ export default async function LecturePage({ params }: { params: { id: string } }
               ) : (
                 profile && !loadFailed && <p className="max-w-prose">Your study material will appear here.</p>
               )}
-            </div>
-          </section>
-        )}
-
-        {transcriptReady && (
-          <section id="ask" aria-labelledby="ask-heading" tabIndex={-1} className="band split concept-target">
-            <h2 id="ask-heading" className="split-side text-2xl font-semibold md:sticky md:top-4 md:self-start">Ask a question</h2>
-            <div className="split-main">
-              {chatLoadFailed && (
-                <p role="alert" className="callout-error mb-3 max-w-prose">
-                  Problem: We couldn’t load your earlier questions. Refresh the page to try again.
-                </p>
-              )}
-              <LectureChat lectureId={lecture.id} history={chatHistory} />
             </div>
           </section>
         )}

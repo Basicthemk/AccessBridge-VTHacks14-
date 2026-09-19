@@ -6,10 +6,8 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { PROFILES, type DisabilityProfile } from "@/lib/profiles";
 
-const field =
-  "mt-1 block w-full rounded-md border-2 border-accent bg-surface px-3 py-2 text-ink";
-const primaryBtn =
-  "w-full rounded-md bg-primary-dark px-4 py-3 font-bold text-surface transition-colors hover:bg-ink disabled:opacity-60";
+const field = "field";
+const primaryBtn = "btn btn-primary w-full";
 
 export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
@@ -55,7 +53,7 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
-      <h2 className="text-3xl font-semibold">
+      <h2 className="text-2xl font-semibold">
         {isSignup ? "Create your account" : "Sign in"}
       </h2>
 
@@ -69,7 +67,7 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
           id="password" name="password" type="password" required minLength={6}
           autoComplete={isSignup ? "new-password" : "current-password"} className={field}
         />
-        {isSignup && <p className="mt-1 text-sm">At least 6 characters.</p>}
+        {isSignup && <p className="mt-2 text-sm">At least 6 characters.</p>}
       </div>
 
       {isSignup && (
@@ -82,7 +80,7 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
                 <label
                   key={p.value}
                   className={`flex cursor-pointer gap-3 rounded-md border-2 p-3 transition-colors focus-within:outline focus-within:outline-[3px] focus-within:outline-offset-2 focus-within:outline-accent ${
-                    selected ? "border-accent bg-background ring-2 ring-accent" : "border-accent bg-surface"
+                    selected ? "border-accent bg-background" : "border-border bg-surface hover:border-accent"
                   }`}
                 >
                   <input
@@ -101,7 +99,7 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
                         </span>
                       )}
                     </span>
-                    <span className="block text-sm">{p.blurb}</span>
+                    <span className="mt-1 block text-sm">{p.blurb}</span>
                   </span>
                 </label>
               );
@@ -112,7 +110,7 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
       <div aria-live="polite">
         {error && (
-          <p role="alert" className="rounded-md border-2 border-error px-3 py-2 font-bold text-error">
+          <p role="alert" className="callout-error">
             Error: {error}
           </p>
         )}
@@ -127,7 +125,7 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
         {busy ? "Working…" : isSignup ? "Create account" : "Sign in"}
       </button>
 
-      <p>
+      <p className="border-t border-border pt-4">
         {isSignup ? "Already have an account? " : "New here? "}
         <Link href={isSignup ? "/login" : "/signup"} className="font-bold text-accent underline underline-offset-4">
           {isSignup ? "Sign in" : "Create an account"}

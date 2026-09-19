@@ -1,6 +1,8 @@
 import { GoogleGenAI, createPartFromUri, createUserContent, FileState } from "@google/genai";
 
-const MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+// Newer models are often overloaded (503), so try the preferred one first, then older ones.
+const MODELS = [process.env.GEMINI_MODEL || "gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash"];
+const TRANSIENT = new Set([429, 500, 503, 504]);
 const NO_SPEECH = "[NO_SPEECH]";
 
 const PROMPT = `Transcribe this lecture recording word for word.
@@ -31,6 +33,31 @@ function explain(err: unknown): TranscribeError {
   return new TranscribeError("Transcription failed unexpectedly. Try again.", detail);
 }
 
+type Contents = ReturnType<typeof createUserContent>;
+
+async function generate(ai: GoogleGenAI, contents: Contents) {
+  let last: unknown;
+  for (const model of MODELS) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        return await ai.models.generateContent({
+          model,
+          contents,
+          config: { temperature: 0, maxOutputTokens: 65536 },
+        });
+      } catch (err) {
+        last = err;
+        const status = (err as { status?: number })?.status;
+        if (status === 404) break; // model retired for this key: go to the next one
+        if (!status || !TRANSIENT.has(status)) throw err;
+        console.warn("transcribe: transient", status, "from", model);
+        if (attempt === 0) await new Promise((r) => setTimeout(r, 5000));
+      }
+    }
+  }
+  throw last;
+}
+
 /** Fetches the recording from a short-lived signed URL and returns its transcript. */
 export async function transcribeFromUrl(signedUrl: string, mimeType: string): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -53,11 +80,7 @@ export async function transcribeFromUrl(signedUrl: string, mimeType: string): Pr
     if (file.state !== FileState.ACTIVE)
       throw new TranscribeError("The recording couldn’t be processed. Re-export it as MP3 or WAV and try again.", `file state ${file.state}`);
 
-    const response = await ai.models.generateContent({
-      model: MODEL,
-      contents: createUserContent([createPartFromUri(file.uri!, file.mimeType!), PROMPT]),
-      config: { temperature: 0, maxOutputTokens: 65536 },
-    });
+    const response = await generate(ai, createUserContent([createPartFromUri(file.uri!, file.mimeType!), PROMPT]));
 
     const text = (response.text ?? "").trim();
     const finish = response.candidates?.[0]?.finishReason;

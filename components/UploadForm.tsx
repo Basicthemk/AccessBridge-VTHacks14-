@@ -18,10 +18,8 @@ import {
 type Stage = "choose" | "uploading" | "saving" | "done";
 type Picked = { file: File; contentType: string; ext: string };
 
-const primaryBtn =
-  "rounded-md bg-primary-dark px-4 py-3 font-bold text-surface transition-colors hover:bg-ink disabled:opacity-60";
-const outlineBtn =
-  "rounded-md border-2 border-accent px-4 py-3 font-bold text-accent hover:bg-accent hover:text-surface";
+const primaryBtn = "btn btn-primary";
+const outlineBtn = "btn btn-outline";
 
 export default function UploadForm() {
   const router = useRouter();
@@ -176,7 +174,7 @@ export default function UploadForm() {
 
   if (stage === "done" && picked) {
     return (
-      <div className="rounded-lg border-2 border-success bg-surface p-5" role="status">
+      <div className="rounded-lg border-2 border-success bg-surface p-4 md:p-5" role="status">
         <h2 className="text-2xl font-semibold text-success">Lecture saved</h2>
         <p className="mt-2">
           <strong>{title.trim()}</strong> ({formatBytes(picked.file.size)}) is in your library.
@@ -203,7 +201,7 @@ export default function UploadForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4" noValidate>
+    <form onSubmit={onSubmit} className="space-y-5" noValidate>
       <div
         onDragEnter={(e) => { e.preventDefault(); if (!busy) setDragging(true); }}
         onDragOver={(e) => { e.preventDefault(); if (!busy) setDragging(true); }}
@@ -216,8 +214,8 @@ export default function UploadForm() {
           choose(e.dataTransfer.files);
         }}
         onClick={() => { if (!busy && !picked) inputRef.current?.click(); }}
-        className={`rounded-lg border-2 border-accent p-5 text-center transition-colors ${
-          dragging ? "border-solid bg-surface" : "border-dashed bg-background"
+        className={`rounded-lg border-2 border-accent bg-surface p-5 transition-colors md:p-6 ${
+          dragging ? "border-solid bg-background" : "border-dashed"
         } ${!picked && !busy ? "cursor-pointer" : ""}`}
       >
         <input
@@ -231,16 +229,17 @@ export default function UploadForm() {
         />
 
         {picked ? (
-          <div className="text-left">
-            <p className="font-bold break-words">{picked.file.name}</p>
-            <p>
-              {picked.ext.toUpperCase()} · {formatBytes(picked.file.size)}
+          <div>
+            <p className="font-heading text-xl font-semibold break-words">{picked.file.name}</p>
+            <p className="mt-1 flex flex-wrap gap-x-3">
+              <span className="font-bold">{picked.ext.toUpperCase()}</span>
+              <span>{formatBytes(picked.file.size)}</span>
             </p>
             {!busy && (
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); clearFile(); }}
-                className="mt-2 font-bold text-accent underline underline-offset-4"
+                className="btn btn-quiet -ml-3 mt-2"
               >
                 Choose a different file
               </button>
@@ -248,12 +247,12 @@ export default function UploadForm() {
           </div>
         ) : (
           <>
-            <p className="font-heading text-2xl font-semibold">
+            <p className="font-heading text-2xl font-semibold text-balance">
               {dragging ? "Drop to add this recording" : "Drag a lecture recording here"}
             </p>
-            <p className="mt-2">or</p>
-            <button type="button" className={`${outlineBtn} mt-2`}>Choose a file</button>
-            <p className="mt-3 text-sm">
+            <p className="mt-3">or</p>
+            <button type="button" className={`${outlineBtn} mt-3`}>Choose a file</button>
+            <p className="mt-4 text-sm">
               {FORMATS_LABEL}. Up to {formatBytes(MAX_BYTES)}.
             </p>
           </>
@@ -269,7 +268,7 @@ export default function UploadForm() {
           maxLength={MAX_TITLE}
           disabled={busy}
           placeholder="For example, Statistics week 4: regression"
-          className="mt-1 block w-full rounded-md border-2 border-accent bg-surface px-3 py-2 text-ink disabled:opacity-60"
+          className="field"
         />
       </div>
 
@@ -277,8 +276,11 @@ export default function UploadForm() {
         <div>
           <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 font-bold">
             <span>{stage === "saving" ? "Saving lecture…" : "Uploading…"}</span>
-            <span>
-              {percent}% · {formatBytes(Math.min(loaded, picked.file.size))} of {formatBytes(picked.file.size)}
+            <span className="flex flex-wrap gap-x-3">
+              <span>{percent}%</span>
+              <span>
+                {formatBytes(Math.min(loaded, picked.file.size))} of {formatBytes(picked.file.size)}
+              </span>
             </span>
           </div>
           <div
@@ -300,7 +302,7 @@ export default function UploadForm() {
             <p className="font-bold text-error">Problem: {error.message}</p>
             {error.detail && <p className="mt-1 text-sm">Details: {error.detail}</p>}
             {/session has ended/.test(error.message) && (
-              <Link href="/login" className="mt-1 inline-block font-bold text-accent underline underline-offset-4">
+              <Link href="/login" className="mt-2 inline-block font-bold text-accent underline underline-offset-4">
                 Go to sign in
               </Link>
             )}
@@ -309,7 +311,7 @@ export default function UploadForm() {
       </div>
       <p className="sr-only" aria-live="polite">{announce}</p>
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         {stage === "uploading" ? (
           <button type="button" className={outlineBtn} onClick={() => xhrRef.current?.abort()}>
             Cancel upload
@@ -320,7 +322,7 @@ export default function UploadForm() {
           </button>
         )}
         {!busy && (
-          <Link href="/dashboard" className={outlineBtn}>Back to your lectures</Link>
+          <Link href="/dashboard" className="btn btn-quiet">Back to your lectures</Link>
         )}
       </div>
     </form>

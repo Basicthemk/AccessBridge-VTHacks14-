@@ -3,6 +3,8 @@ import type { ContentListUnion, GenerateContentConfig, GenerateContentResponse, 
 // Newer models are often overloaded (503), so try the preferred one first, then older ones. Each
 // model has its own daily quota, so the Lite model at the end keeps working after the others run out.
 export const MODELS = [process.env.GEMINI_MODEL || "gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
+/** For work where the Lite model's quality isn't good enough, such as linking ideas in a concept map. */
+export const MODELS_WITHOUT_LITE = MODELS.filter((m) => !/lite/i.test(m));
 const TRANSIENT = new Set([429, 500, 503, 504]);
 const RETRY_DELAY_MS = 5000;
 const MIN_ATTEMPT_MS = 20_000;
@@ -40,11 +42,13 @@ export async function generateWithFallback<T>(
     parse: (response: GenerateContentResponse) => T;
     deadline?: number;
     log?: string;
+    /** Models to try, in order. Defaults to all of MODELS. */
+    models?: string[];
   }
 ): Promise<T> {
   const tag = opts.log ?? "gemini";
   let last: unknown;
-  for (const model of MODELS) {
+  for (const model of opts.models ?? MODELS) {
     for (let attempt = 0; attempt < 2; attempt++) {
       const remaining = opts.deadline ? opts.deadline - Date.now() : Infinity;
       if (remaining < MIN_ATTEMPT_MS) throw last instanceof Error && !(last instanceof BadOutputError) ? last : new DeadlineError();

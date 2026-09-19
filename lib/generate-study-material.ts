@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { BadOutputError, DeadlineError, generateWithFallback, isDailyQuota } from "./gemini";
+import { BadOutputError, DeadlineError, MODELS_WITHOUT_LITE, generateWithFallback, isDailyQuota } from "./gemini";
 import type { DisabilityProfile } from "./profiles";
 import {
   CONCEPT_MAP_SCHEMA,
@@ -198,6 +198,12 @@ export async function generateStudyMaterial(
         parse: parsing(parseConceptMapOutput),
         deadline,
         log: "concept-map",
+        // The Lite model links ideas wrongly, and a wrong map is worse than none.
+        models: MODELS_WITHOUT_LITE,
+        // A missing map must not lose the captions, which are the core of this material.
+      }).catch((err) => {
+        console.warn("concept-map: skipped,", err instanceof Error ? err.message.slice(0, 200) : String(err));
+        return undefined;
       }),
     ]);
 
@@ -208,7 +214,7 @@ export async function generateStudyMaterial(
       const to = i + 1 < output.sections.length ? output.sections[i + 1].start_paragraph - 1 : paragraphs.length;
       return { heading: s.heading, paragraphs: paragraphs.slice(from - 1, to).map(toCaptionLines) };
     });
-    return parseStudyMaterial(profile, { version: 1, profile, sections, glossary: output.glossary, emphasised: output.emphasised, concept_map: conceptMap });
+    return parseStudyMaterial(profile, { version: 1, profile, sections, glossary: output.glossary, emphasised: output.emphasised, ...(conceptMap ? { concept_map: conceptMap } : { concept_map_unavailable: true }) });
   } catch (err) {
     throw explain(err);
   }

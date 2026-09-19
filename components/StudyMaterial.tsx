@@ -70,7 +70,7 @@ function Dyslexia({ m, lectureId }: { m: DyslexiaMaterial; lectureId: string }) 
 function DeafHoh({ m }: { m: DeafHohMaterial }) {
   return (
     <div className="reading flow-lg">
-      <ConceptMapView map={m.concept_map} />
+      <ConceptMapView map={m.concept_map} unavailable={m.concept_map_unavailable} />
 
       <section aria-labelledby="captions">
         <h3 id="captions" className={h3}>Captioned transcript</h3>

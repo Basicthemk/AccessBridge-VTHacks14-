@@ -7,12 +7,17 @@ import { relationSentence, type Concept, type ConceptMap } from "@/lib/study-mat
 
 const h3 = "text-2xl font-semibold";
 
-export default function ConceptMapView({ map }: { map: ConceptMap | undefined }) {
+export default function ConceptMapView({ map, unavailable }: { map: ConceptMap | undefined; unavailable?: boolean }) {
   return (
     <section aria-labelledby="concept-map">
       <h3 id="concept-map" className={h3}>Concept map</h3>
 
-      {!map ? (
+      {!map && unavailable ? (
+        <p className="mt-3">
+          The concept map couldn’t be made this time because the study-material service was busy or out of its daily limit.
+          Your captions and glossary below are complete. Choose “Make study material again” under Progress to try the map again later.
+        </p>
+      ) : !map ? (
         <p className="mt-3">
           This study material was made before concept maps existed. Choose “Make study material again” under Progress to add one.
         </p>

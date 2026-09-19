@@ -37,6 +37,8 @@ export type DeafHohMaterial = {
   /** `cue` says how the speaker signalled it, e.g. "said it would be on the exam". */
   emphasised: { point: string; cue: string }[];
   concept_map?: ConceptMap;
+  /** Set when the concept map could not be made (service busy or out of quota). The captions are still complete. */
+  concept_map_unavailable?: true;
 };
 
 export type StudyMaterial = DyslexiaMaterial | DeafHohMaterial;
@@ -299,6 +301,7 @@ export function parseStudyMaterial(profile: DisabilityProfile, v: unknown): Stud
     sections,
     // Rows saved before concept maps existed have no map; that is still valid.
     ...(o.concept_map === undefined ? {} : { concept_map: parseConceptMap(o.concept_map) }),
+    ...(o.concept_map_unavailable === true ? { concept_map_unavailable: true as const } : {}),
     glossary: terms(o.glossary, "glossary", 30),
     emphasised: array(o.emphasised, "emphasised", 0, 15).map((e, i) => {
       const r = record(e, `emphasised[${i}]`);
